@@ -22,11 +22,17 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            registry-mirrors=https://docker.m.daocloud.io,https://dockerhub.icu,https://docker.1panel.live
+
       - name: Build Docker image
         run: |
           TAG="$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)"
           echo "TAG=${TAG}" >> $GITHUB_ENV
-          docker build -t "new-api:${TAG}" .
+          docker buildx build --load -t "new-api:${TAG}" .
           docker save "new-api:${TAG}" -o /tmp/new-api.tar
 
       - name: Upload via SCP
