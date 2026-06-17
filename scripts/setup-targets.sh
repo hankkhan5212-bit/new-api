@@ -16,7 +16,8 @@ if [ -n "${TARGETS:-}" ]; then
 else
     TARGETS=(10.0.3.6 10.0.1.9)
 fi
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOCKER_RPM_DIR="/tmp/docker-rpms"
 
 log() { echo ">>> [$(date '+%H:%M:%S')] $*"; }
@@ -98,16 +99,33 @@ distribute_project_files() {
     local host="$1"
     log "Setting up project files on ${host}..."
 
-    ssh -o ConnectTimeout=10 root@"${host}" "mkdir -p /opt/new-api/data /opt/new-api/logs"
+    # 确保目标目录存在（分步可查错）
+    ssh -o ConnectTimeout=10 root@"${host}" "mkdir -p /opt/new-api/data /opt/new-api/logs" || {
+        err "Failed to create /opt/new-api on ${host}"
+        return 1
+    }
 
-    scp -o ConnectTimeout=10 "${PROJECT_DIR}/docker-compose.prod.yml" root@"${host}:/opt/new-api/
-    scp -o ConnectTimeout=10 "${PROJECT_DIR}/.env.production" root@"${host}:/opt/new-api/
+    log "  Copying docker-compose.prod.yml..."
+    scp -o ConnectTimeout=10 "${PROJECT_DIR}/docker-compose.prod.yml" "root@${host}:/opt/new-api/" || {
+        err "Failed to copy docker-compose.prod.yml to ${host}"
+        return 1
+    }
+
+    log "  Copying .env.production..."
+    scp -o ConnectTimeout=10 "${PROJECT_DIR}/.env.production" "root@${host}:/opt/new-api/" || {
+        err "Failed to copy .env.production to ${host}"
+        return 1
+    }
+
+    log "  Files copied OK to ${host}"
 
     # 提醒用户编辑 .env
     echo ""
-    echo "  ⚠️  Please edit /opt/new-api/.env.production on ${host}"
-    echo "     cp /opt/new-api/.env.production /opt/new-api/.env"
-    echo "     vi /opt/new-api/.env   # set real passwords and SESSION_SECRET"
+    echo "  ⚠️  Please edit /opt/new-api/.env on ${host}"
+    echo "     ssh root@${host}"
+    echo "     cd /opt/new-api"
+    echo "     cp .env.production .env"
+    echo "     vi .env   # set real passwords and SESSION_SECRET"
     echo ""
 }
 
