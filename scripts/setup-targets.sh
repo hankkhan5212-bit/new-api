@@ -11,7 +11,11 @@
 
 set -euo pipefail
 
-TARGETS=("${TARGETS[@]:-10.0.3.6 10.0.1.9}")
+if [ -n "${TARGETS:-}" ]; then
+    TARGETS=($TARGETS)
+else
+    TARGETS=(10.0.3.6 10.0.1.9)
+fi
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DOCKER_RPM_DIR="/tmp/docker-rpms"
 
