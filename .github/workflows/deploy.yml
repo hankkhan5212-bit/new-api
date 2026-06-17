@@ -1,0 +1,31 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Deployment reason"
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy via JumpServer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to target machines
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 43.128.122.99
+          port: 36000
+          username: root
+          key: ${{ secrets.JUMP_SERVER_SSH_KEY }}
+          script: |
+            cd /opt/new-api || { echo "ERROR: /opt/new-api not found"; exit 1; }
+            git checkout main
+            git pull origin main
+            bash scripts/deploy.sh

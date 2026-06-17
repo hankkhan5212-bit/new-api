@@ -1,0 +1,47 @@
+# New-API Production Docker Compose (external DB/Redis)
+#
+# 目标机部署，仅包含 new-api 服务，数据库和 Redis 使用外部服务
+# 启动: IMAGE_TAG=xxx docker compose -f docker-compose.prod.yml up -d
+
+version: "3.4"
+
+services:
+  new-api:
+    image: new-api:${IMAGE_TAG}
+    container_name: new-api
+    restart: always
+    command: --log-dir /app/logs
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    environment:
+      # 主数据库 - MySQL
+      - SQL_DSN=${SQL_DSN}
+      # 日志数据库 - PostgreSQL (不设置则日志写入主库)
+      - LOG_SQL_DSN=${LOG_SQL_DSN}
+      # Redis
+      - REDIS_CONN_STRING=${REDIS_CONN_STRING}
+      # 多节点部署必要配置
+      - SESSION_SECRET=${SESSION_SECRET}
+      - NODE_TYPE=master
+      - NODE_NAME=${NODE_NAME:-new-api-node}
+      # 通用配置
+      - TZ=Asia/Shanghai
+      - ERROR_LOG_ENABLED=true
+      - BATCH_UPDATE_ENABLED=true
+      - SYNC_FREQUENCY=${SYNC_FREQUENCY:-60}
+      - BATCH_UPDATE_INTERVAL=${BATCH_UPDATE_INTERVAL:-5}
+      # 可选调优
+      - STREAMING_TIMEOUT=${STREAMING_TIMEOUT:-120}
+      - RELAY_TIMEOUT=${RELAY_TIMEOUT:-0}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
