@@ -29,25 +29,18 @@ jobs:
           docker build -t "new-api:${TAG}" .
           docker save "new-api:${TAG}" -o /tmp/new-api.tar
 
-      - name: Upload image to JumpServer
-        uses: appleboy/scp-action@v0
-        with:
-          host: 43.128.122.99
-          port: 36000
-          username: root
-          key: ${{ secrets.JUMP_SERVER_SSH_KEY }}
-          source: /tmp/new-api.tar
-          target: /tmp/
+      - name: Upload via SCP
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.JUMP_SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          scp -P 36000 -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key /tmp/new-api.tar root@43.128.122.99:/tmp/
 
       - name: Deploy via JumpServer
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 43.128.122.99
-          port: 36000
-          username: root
-          key: ${{ secrets.JUMP_SERVER_SSH_KEY }}
-          script: |
-            cd /opt/new-api || { echo "ERROR: /opt/new-api not found"; exit 1; }
+        run: |
+          ssh -p 36000 -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key root@43.128.122.99 "
+            cd /opt/new-api || exit 1
             git checkout main
             git pull origin main
             bash scripts/deploy.sh --dist-from-tar /tmp/new-api.tar
+          "
