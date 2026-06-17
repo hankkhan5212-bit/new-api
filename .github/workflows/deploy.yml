@@ -12,12 +12,34 @@ on:
         type: string
 
 jobs:
-  deploy:
-    name: Deploy via JumpServer
+  build-and-deploy:
+    name: Build & Deploy via JumpServer
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to target machines
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build Docker image
+        run: |
+          TAG="$(date +'%Y%m%d%H%M%S')-$(git rev-parse --short HEAD)"
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+          docker build -t "new-api:${TAG}" .
+          docker save "new-api:${TAG}" -o /tmp/new-api.tar
+
+      - name: Upload image to JumpServer
+        uses: appleboy/scp-action@v0
+        with:
+          host: 43.128.122.99
+          port: 36000
+          username: root
+          key: ${{ secrets.JUMP_SERVER_SSH_KEY }}
+          source: /tmp/new-api.tar
+          target: /tmp/
+
+      - name: Deploy via JumpServer
         uses: appleboy/ssh-action@v1
         with:
           host: 43.128.122.99
@@ -28,4 +50,4 @@ jobs:
             cd /opt/new-api || { echo "ERROR: /opt/new-api not found"; exit 1; }
             git checkout main
             git pull origin main
-            bash scripts/deploy.sh
+            bash scripts/deploy.sh --dist-from-tar /tmp/new-api.tar
