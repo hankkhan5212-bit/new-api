@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { StaticDataTable } from '@/components/data-table'
 import { Dialog } from '@/components/dialog'
 import { safeJsonParse } from '../utils/json-parser'
@@ -45,6 +46,7 @@ type GroupRatioVisualEditorProps = {
   userUsableGroups: string
   groupGroupRatio: string
   autoGroups: string
+  modelGroupRatio: string
   onChange: (field: string, value: string) => void
 }
 
@@ -156,6 +158,7 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   userUsableGroups,
   groupGroupRatio,
   autoGroups,
+  modelGroupRatio,
   onChange,
 }: GroupRatioVisualEditorProps) {
   const { t } = useTranslation()
@@ -650,6 +653,27 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Model group ratio overrides */}
+      <Card className={sectionCardClassName}>
+        <CardHeader className={sectionHeaderClassName}>
+          <CardTitle>{t('Model group ratio overrides')}</CardTitle>
+          <CardDescription>
+            {t(
+              'Set per-model ratio overrides within a group. Models not listed here will use the group default ratio. Format: group → model → ratio. Example:'
+            )}
+            {` { "vip": { "gpt-4": 0.8, "claude": 1.2 } }`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            rows={8}
+            value={modelGroupRatio}
+            onChange={(e) => onChange('ModelGroupRatio', e.target.value)}
+            placeholder='{ "vip": { "gpt-4": 0.8 } }'
+          />
         </CardContent>
       </Card>
 

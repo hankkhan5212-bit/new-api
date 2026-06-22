@@ -67,6 +67,7 @@ type GroupFormValues = {
   AutoGroups: string
   DefaultUseAutoGroup: boolean
   GroupSpecialUsableGroup: string
+  ModelGroupRatio: string
 }
 
 type GroupRatioFormProps = {
@@ -141,6 +142,7 @@ export const GroupRatioForm = memo(function GroupRatioForm({
               userUsableGroups={form.watch('UserUsableGroups')}
               groupGroupRatio={form.watch('GroupGroupRatio')}
               autoGroups={form.watch('AutoGroups')}
+              modelGroupRatio={form.watch('ModelGroupRatio')}
               onChange={(field, value) =>
                 handleFieldChange(field as keyof GroupFormValues, value)
               }
@@ -289,6 +291,26 @@ export const GroupRatioForm = memo(function GroupRatioForm({
                     {t(
                       'Nested JSON defining per-group rules for adding (+:), removing (-:), or appending usable groups.'
                     )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='ModelGroupRatio'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Model group ratio overrides')}</FormLabel>
+                  <FormControl>
+                    <Textarea rows={8} {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Nested JSON: group → model → ratio. Overrides the group default ratio for specific models within a group. Leave empty or omit models to use the group default. Example:'
+                    )}
+                    {` { "vip": { "gpt-4": 0.8, "claude": 1.2 } }`}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

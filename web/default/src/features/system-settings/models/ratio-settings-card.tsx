@@ -124,6 +124,7 @@ const createGroupSchema = (t: Translate) =>
     }),
     DefaultUseAutoGroup: z.boolean(),
     GroupSpecialUsableGroup: createJsonStringField(t),
+    ModelGroupRatio: createJsonStringField(t),
   })
 
 type ModelFormValues = z.infer<ReturnType<typeof createModelSchema>>
@@ -195,6 +196,7 @@ export function RatioSettingsCard({
     GroupSpecialUsableGroup: normalizeJsonString(
       groupDefaults.GroupSpecialUsableGroup
     ),
+    ModelGroupRatio: normalizeJsonString(groupDefaults.ModelGroupRatio),
   })
   const modelSchema = useMemo(() => createModelSchema(t), [t])
   const groupSchema = useMemo(() => createGroupSchema(t), [t])
@@ -232,6 +234,7 @@ export function RatioSettingsCard({
       GroupSpecialUsableGroup: formatJsonForTextarea(
         groupDefaults.GroupSpecialUsableGroup
       ),
+      ModelGroupRatio: formatJsonForTextarea(groupDefaults.ModelGroupRatio),
     },
   })
 
@@ -281,6 +284,7 @@ export function RatioSettingsCard({
       GroupSpecialUsableGroup: normalizeJsonString(
         groupDefaults.GroupSpecialUsableGroup
       ),
+      ModelGroupRatio: normalizeJsonString(groupDefaults.ModelGroupRatio),
     }
 
     groupForm.reset({
@@ -293,6 +297,7 @@ export function RatioSettingsCard({
       GroupSpecialUsableGroup: formatJsonForTextarea(
         groupDefaults.GroupSpecialUsableGroup
       ),
+      ModelGroupRatio: formatJsonForTextarea(groupDefaults.ModelGroupRatio),
     })
   }, [groupDefaults, groupForm])
 
@@ -351,12 +356,14 @@ export function RatioSettingsCard({
         GroupSpecialUsableGroup: normalizeJsonString(
           values.GroupSpecialUsableGroup
         ),
+        ModelGroupRatio: normalizeJsonString(values.ModelGroupRatio),
       }
 
       // Map form field names to API keys (most are 1:1, except GroupSpecialUsableGroup)
       const apiKeyMap: Record<string, string> = {
         GroupSpecialUsableGroup:
           'group_ratio_setting.group_special_usable_group',
+        ModelGroupRatio: 'group_ratio_setting.model_group_ratio',
       }
 
       const updates = (
