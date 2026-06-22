@@ -32,10 +32,21 @@ var defaultGroupSpecialUsableGroup = map[string]map[string]string{
 	},
 }
 
+// modelGroupRatioMap 存储分组内特定模型的倍率覆盖
+// 结构：map[分组名称]map[模型名称]倍率
+// 例：modelGroupRatio["vip"]["gpt-4"] = 0.8
+var modelGroupRatioMap = types.NewRWMap[string, map[string]float64]()
+var defaultModelGroupRatio = map[string]map[string]float64{
+	"vip": {
+		"example-model": 0.8,
+	},
+}
+
 type GroupRatioSetting struct {
 	GroupRatio              *types.RWMap[string, float64]            `json:"group_ratio"`
 	GroupGroupRatio         *types.RWMap[string, map[string]float64] `json:"group_group_ratio"`
 	GroupSpecialUsableGroup *types.RWMap[string, map[string]string]  `json:"group_special_usable_group"`
+	ModelGroupRatio         *types.RWMap[string, map[string]float64] `json:"model_group_ratio"`
 }
 
 var groupRatioSetting GroupRatioSetting
@@ -46,11 +57,13 @@ func init() {
 
 	groupRatioMap.AddAll(defaultGroupRatio)
 	groupGroupRatioMap.AddAll(defaultGroupGroupRatio)
+	modelGroupRatioMap.AddAll(defaultModelGroupRatio)
 
 	groupRatioSetting = GroupRatioSetting{
 		GroupSpecialUsableGroup: groupSpecialUsableGroup,
 		GroupRatio:              groupRatioMap,
 		GroupGroupRatio:         groupGroupRatioMap,
+		ModelGroupRatio:         modelGroupRatioMap,
 	}
 
 	config.GlobalConfig.Register("group_ratio_setting", &groupRatioSetting)
@@ -122,4 +135,42 @@ func CheckGroupRatio(jsonStr string) error {
 		}
 	}
 	return nil
+}
+
+// GetModelGroupRatio 获取指定分组下某个模型的倍率覆盖值。
+// 优先查找 modelGroupRatioMap[group][model]，未找到时回退到 GetGroupRatio(group)。
+func GetModelGroupRatio(group, model string) float64 {
+	if group == "" || model == "" {
+		return 1.0
+	}
+	// 先尝试 normalized matching
+	normalized := FormatMatchingModelName(model)
+	// 1. 先尝试精确匹配
+	if modelRatios, ok := modelGroupRatioMap.Get(group); ok {
+		if ratio, ok := modelRatios[model]; ok {
+			return ratio
+		}
+		if normalized != "" && normalized != model {
+			if ratio, ok := modelRatios[normalized]; ok {
+				return ratio
+			}
+		}
+	}
+	// 2. 回退到分组默认倍率
+	return GetGroupRatio(group)
+}
+
+// ModelGroupRatio2JSONString 序列化模型分组倍率配置为 JSON 字符串。
+func ModelGroupRatio2JSONString() string {
+	return modelGroupRatioMap.MarshalJSONString()
+}
+
+// UpdateModelGroupRatioByJSONString 从 JSON 字符串加载模型分组倍率配置。
+func UpdateModelGroupRatioByJSONString(jsonStr string) error {
+	return types.LoadFromJsonString(modelGroupRatioMap, jsonStr)
+}
+
+// GetModelGroupRatioCopy 返回模型分组倍率配置的副本。
+func GetModelGroupRatioCopy() map[string]map[string]float64 {
+	return modelGroupRatioMap.ReadAll()
 }

@@ -57,8 +57,8 @@ func HandleGroupRatio(ctx *gin.Context, relayInfo *relaycommon.RelayInfo) types.
 		groupRatioInfo.GroupRatio = userGroupRatio
 		groupRatioInfo.HasSpecialRatio = true
 	} else {
-		// normal group ratio
-		groupRatioInfo.GroupRatio = ratio_setting.GetGroupRatio(relayInfo.UsingGroup)
+		// model-level group ratio override (falls back to group default if not configured)
+		groupRatioInfo.GroupRatio = ratio_setting.GetModelGroupRatio(relayInfo.UsingGroup, relayInfo.OriginModelName)
 	}
 
 	return groupRatioInfo
