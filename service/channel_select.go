@@ -8,6 +8,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -90,7 +91,13 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 		if len(setting.GetAutoGroups()) == 0 {
 			return nil, selectGroup, errors.New("auto groups is not enabled")
 		}
-		autoGroups := GetUserAutoGroup(userGroup)
+		userGroupsRaw, _ := common.GetContextKey(param.Ctx, constant.ContextKeyUserGroups)
+		var autoGroups []string
+		if raw, ok := userGroupsRaw.([]string); ok && len(raw) > 0 {
+			autoGroups = GetUserAutoGroup(raw)
+		} else {
+			autoGroups = GetUserAutoGroup([]string{userGroup})
+		}
 
 		// startGroupIndex: the group index to start searching from
 		// startGroupIndex: 开始搜索的分组索引
@@ -153,10 +160,78 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			break
 		}
 	} else {
-		channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
-		if err != nil {
-			return nil, param.TokenGroup, err
+		// Build ordered group list: token's group first, then other user groups
+		groupList := []string{param.TokenGroup}
+		userGroupsRaw, _ := common.GetContextKey(param.Ctx, constant.ContextKeyUserGroups)
+		if raw, ok := userGroupsRaw.([]string); ok && len(raw) > 1 {
+			for _, g := range raw {
+				if g != param.TokenGroup {
+					groupList = append(groupList, g)
+				}
+			}
+			// Sort other groups by strategy (keep token group first)
+			if ratio_setting.GetMultiGroupStrategy() == "lowest_ratio" {
+				sortGroupsByModelRatio(groupList[1:], param.ModelName)
+			}
+		}
+
+		// Single group: unchanged behavior
+		if len(groupList) <= 1 {
+			channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
+			if err != nil {
+				return nil, param.TokenGroup, err
+			}
+		} else {
+			// Multi-group: iterate groups, similar to auto logic
+			startGroupIndex := 0
+			if lastIdx, exists := common.GetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex); exists {
+				if idx, ok := lastIdx.(int); ok {
+					startGroupIndex = idx
+				}
+			}
+			for i := startGroupIndex; i < len(groupList); i++ {
+				g := groupList[i]
+				priorityRetry := param.GetRetry()
+				if i > startGroupIndex {
+					priorityRetry = 0
+				}
+				channel, _ = model.GetRandomSatisfiedChannel(g, param.ModelName, priorityRetry)
+				if channel == nil {
+					common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
+					param.SetRetry(0)
+					continue
+				}
+				selectGroup = g
+				if i > 0 {
+					common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroup, g)
+				}
+				if priorityRetry >= common.RetryTimes {
+					common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
+					param.SetRetry(0)
+					param.ResetRetryNextTry()
+				} else {
+					common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i)
+				}
+				break
+			}
 		}
 	}
 	return channel, selectGroup, nil
+}
+
+// sortGroupsByModelRatio sorts groups by model_group_ratio ascending (cheapest first).
+func sortGroupsByModelRatio(groups []string, modelName string) {
+	if len(groups) <= 1 {
+		return
+	}
+	// Bubble sort — few groups, simplicity > performance
+	for i := 0; i < len(groups)-1; i++ {
+		for j := i + 1; j < len(groups); j++ {
+			ri := ratio_setting.GetModelGroupRatio(groups[i], modelName)
+			rj := ratio_setting.GetModelGroupRatio(groups[j], modelName)
+			if rj < ri {
+				groups[i], groups[j] = groups[j], groups[i]
+			}
+		}
+	}
 }

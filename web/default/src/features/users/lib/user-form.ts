@@ -32,6 +32,7 @@ export const userFormSchema = z.object({
   role: z.number().optional(),
   quota_dollars: z.number().min(0).optional(),
   group: z.string().optional(),
+  groups_input: z.string().optional(),
   remark: z.string().optional(),
 })
 
@@ -48,6 +49,7 @@ export const USER_FORM_DEFAULT_VALUES: UserFormValues = {
   role: 1, // Default to common user
   quota_dollars: 0,
   group: DEFAULT_GROUP,
+  groups_input: '',
   remark: '',
 }
 
@@ -74,6 +76,9 @@ export function transformFormDataToPayload(
   } else {
     // For update: quota is adjusted atomically via /api/user/manage, not sent here
     payload.group = data.group
+    // Build groups from comma-separated input or fallback to single group
+    payload.groups = buildGroupsJSON(data.groups_input, data.group, DEFAULT_GROUP)
+    payload.group = payload.groups ? JSON.parse(payload.groups)[0] || DEFAULT_GROUP : (data.group || DEFAULT_GROUP)
     payload.remark = data.remark || undefined
     payload.id = userId
   }
@@ -85,6 +90,17 @@ export function transformFormDataToPayload(
  * Transform user data to form defaults
  */
 export function transformUserToFormDefaults(user: User): UserFormValues {
+  // Parse multi-group from JSON string to comma-separated display value
+  let groupsInput = ''
+  if (user.groups && typeof user.groups === 'string') {
+    try {
+      const parsed = JSON.parse(user.groups)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        groupsInput = parsed.join(',')
+      }
+    } catch {} // ignore, fallback to single group
+  }
+
   return {
     username: user.username,
     display_name: user.display_name,
@@ -92,6 +108,21 @@ export function transformUserToFormDefaults(user: User): UserFormValues {
     role: user.role,
     quota_dollars: quotaUnitsToDollars(user.quota),
     group: user.group || DEFAULT_GROUP,
+    groups_input: groupsInput,
     remark: user.remark || '',
   }
+}
+
+/**
+ * Builds the groups JSON string from comma-separated input or single group backup.
+ */
+function buildGroupsJSON(input: string | undefined, fallbackGroup: string | undefined, defaultGroup: string): string {
+  let list: string[] = []
+  if (input && input.trim()) {
+    list = input.split(',').map(s => s.trim()).filter(s => s.length > 0)
+  }
+  if (list.length === 0) {
+    list = fallbackGroup ? [fallbackGroup] : [defaultGroup]
+  }
+  return JSON.stringify(list)
 }

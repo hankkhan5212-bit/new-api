@@ -44,6 +44,14 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   sideDrawerContentClassName,
@@ -68,6 +76,7 @@ type GroupFormValues = {
   DefaultUseAutoGroup: boolean
   GroupSpecialUsableGroup: string
   ModelGroupRatio: string
+  MultiGroupStrategy: string
 }
 
 type GroupRatioFormProps = {
@@ -153,6 +162,84 @@ export const GroupRatioForm = memo(function GroupRatioForm({
               onChange={(value) =>
                 handleFieldChange('GroupSpecialUsableGroup', value)
               }
+            />
+
+            <FormField
+              control={form.control}
+              name='MultiGroupStrategy'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Multi-group strategy')}</FormLabel>
+                  <Select
+                    items={[
+                      { value: 'priority_order', label: t('Priority order (token group / auto)') },
+                      { value: 'lowest_ratio', label: t('Lowest model ratio first') },
+                    ]}
+                    onValueChange={(value) => value !== null && field.onChange(value)}
+                    value={field.value || 'priority_order'}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value='priority_order'>
+                          {t('Priority order (token group / auto)')}
+                        </SelectItem>
+                        <SelectItem value='lowest_ratio'>
+                          {t('Lowest model ratio first')}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {t(
+                      'When a user belongs to multiple groups and a model is available in multiple groups, decides which group to use.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='MultiGroupStrategy'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Multi-group strategy')}</FormLabel>
+                  <Select
+                    items={[
+                      { value: 'priority_order', label: t('Priority order (token group / auto)') },
+                      { value: 'lowest_ratio', label: t('Lowest model ratio first') },
+                    ]}
+                    onValueChange={(value) => value !== null && field.onChange(value)}
+                    value={field.value || 'priority_order'}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value='priority_order'>
+                          {t('Priority order (token group / auto)')}
+                        </SelectItem>
+                        <SelectItem value='lowest_ratio'>
+                          {t('Lowest model ratio first')}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {t('When a user belongs to multiple groups, decides which group to use when a model is available in multiple groups.')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
 
             <FormField

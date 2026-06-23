@@ -41,26 +41,29 @@ func GetPricing(c *gin.Context) {
 	for s, f := range ratio_setting.GetGroupRatioCopy() {
 		groupRatio[s] = f
 	}
-	var group string
+	var userGroupList []string
 	if exists {
 		user, err := model.GetUserCache(userId.(int))
 		if err == nil {
-			group = user.Group
+			userGroupList = model.GetUserGroupList(user)
 			for g := range groupRatio {
-				ratio, ok := ratio_setting.GetGroupGroupRatio(group, g)
-				if ok {
-					groupRatio[g] = ratio
+				for _, ug := range userGroupList {
+					ratio, ok := ratio_setting.GetGroupGroupRatio(ug, g)
+					if ok {
+						groupRatio[g] = ratio
+						break
+					}
 				}
 			}
 		}
 	}
 
-	usableGroup = service.GetUserUsableGroups(group)
+	usableGroup = service.GetUserUsableGroups(userGroupList)
 	pricing = filterPricingByUsableGroups(pricing, usableGroup)
 	// check groupRatio contains usableGroup
-	for group := range ratio_setting.GetGroupRatioCopy() {
-		if _, ok := usableGroup[group]; !ok {
-			delete(groupRatio, group)
+	for g := range ratio_setting.GetGroupRatioCopy() {
+		if _, ok := usableGroup[g]; !ok {
+			delete(groupRatio, g)
 		}
 	}
 
@@ -71,7 +74,7 @@ func GetPricing(c *gin.Context) {
 		"group_ratio":        groupRatio,
 		"usable_group":       usableGroup,
 		"supported_endpoint": model.GetSupportedEndpointMap(),
-		"auto_groups":        service.GetUserAutoGroup(group),
+		"auto_groups":        service.GetUserAutoGroup(userGroupList),
 		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
 	})
 }

@@ -57,6 +57,7 @@ const OPTION_KEYS = [
   'GroupGroupRatio',
   'group_ratio_setting.group_special_usable_group',
   'group_ratio_setting.model_group_ratio',
+  'group_ratio_setting.multi_group_strategy',
   'AutoGroups',
   'DefaultUseAutoGroup',
 ];
@@ -82,6 +83,7 @@ export default function GroupRatioSettings(props) {
     GroupGroupRatio: '',
     'group_ratio_setting.group_special_usable_group': '',
     'group_ratio_setting.model_group_ratio': '',
+    'group_ratio_setting.multi_group_strategy': 'priority_order',
     AutoGroups: '',
     DefaultUseAutoGroup: false,
   });
@@ -186,6 +188,13 @@ export default function GroupRatioSettings(props) {
     }));
   }, []);
 
+  const handleMultiGroupStrategyChange = useCallback((value) => {
+    setInputs((prev) => ({
+      ...prev,
+      'group_ratio_setting.multi_group_strategy': value,
+    }));
+  }, []);
+
   const dv = dataVersionRef.current;
 
   const renderVisualMode = () => (
@@ -271,6 +280,33 @@ export default function GroupRatioSettings(props) {
           groupNames={groupNames}
           onChange={handleModelGroupRatioChange}
         />
+      </Form.Section>
+
+      <Form.Section text={t('多分组策略')}>
+        <Text type='tertiary' size='small' style={{ display: 'block', marginBottom: 12 }}>
+          {t('用户属于多个分组时，同一模型存在于多个分组中，选择分组的策略')}
+        </Text>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <RadioGroup
+              value={inputs['group_ratio_setting.multi_group_strategy'] || 'priority_order'}
+              onChange={(e) => handleMultiGroupStrategyChange(e.target.value)}
+            >
+              <Radio value='priority_order'>
+                {t('优先级顺序')}
+                <Text type='tertiary' size='small' style={{ display: 'block', marginTop: 2 }}>
+                  {t('按令牌分组或 auto 顺序选择')}
+                </Text>
+              </Radio>
+              <Radio value='lowest_ratio'>
+                {t('最低倍率优先')}
+                <Text type='tertiary' size='small' style={{ display: 'block', marginTop: 2 }}>
+                  {t('自动选择模型倍率最低的分组')}
+                </Text>
+              </Radio>
+            </RadioGroup>
+          </Col>
+        </Row>
       </Form.Section>
     </Form>
   );
@@ -385,6 +421,24 @@ export default function GroupRatioSettings(props) {
                 setInputs((prev) => ({
                   ...prev,
                   'group_ratio_setting.model_group_ratio': value,
+                }))
+              }
+            />
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col xs={24} sm={16}>
+            <Form.Input
+              label={t('多分组策略')}
+              placeholder={'priority_order 或 lowest_ratio'}
+              extraText={t(
+                'priority_order: 按令牌分组或 auto 顺序优先。lowest_ratio: 同一模型存在于多个分组时，自动选倍率最低的分组',
+              )}
+              field={'group_ratio_setting.multi_group_strategy'}
+              onChange={(value) =>
+                setInputs((prev) => ({
+                  ...prev,
+                  'group_ratio_setting.multi_group_strategy': value,
                 }))
               }
             />

@@ -17,6 +17,7 @@ import (
 type UserBase struct {
 	Id       int    `json:"id"`
 	Group    string `json:"group"`
+	Groups   string `json:"groups,omitempty"`
 	Email    string `json:"email"`
 	Quota    int    `json:"quota"`
 	Status   int    `json:"status"`
@@ -26,6 +27,7 @@ type UserBase struct {
 
 func (user *UserBase) WriteContext(c *gin.Context) {
 	common.SetContextKey(c, constant.ContextKeyUserGroup, user.Group)
+	common.SetContextKey(c, constant.ContextKeyUserGroups, GetUserGroupList(user))
 	common.SetContextKey(c, constant.ContextKeyUserQuota, user.Quota)
 	common.SetContextKey(c, constant.ContextKeyUserStatus, user.Status)
 	common.SetContextKey(c, constant.ContextKeyUserEmail, user.Email)
@@ -108,6 +110,7 @@ func GetUserCache(userId int) (userCache *UserBase, err error) {
 	userCache = &UserBase{
 		Id:       user.Id,
 		Group:    user.Group,
+		Groups:   user.Groups,
 		Quota:    user.Quota,
 		Status:   user.Status,
 		Username: user.Username,

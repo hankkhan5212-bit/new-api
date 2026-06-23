@@ -178,19 +178,30 @@ type modelListGroups struct {
 func getModelListGroups(c *gin.Context) (modelListGroups, error) {
 	tokenGroup := common.GetContextKeyString(c, constant.ContextKeyTokenGroup)
 	userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
-	if userGroup == "" && (tokenGroup == "" || tokenGroup == "auto") {
-		var err error
-		userGroup, err = model.GetUserGroup(c.GetInt("id"), false)
+
+	// Get all user groups (supports multi-group)
+	userGroupsRaw, _ := common.GetContextKey(c, constant.ContextKeyUserGroups)
+	var userGroupList []string
+	if raw, ok := userGroupsRaw.([]string); ok && len(raw) > 0 {
+		userGroupList = raw
+	} else if userGroup != "" {
+		userGroupList = []string{userGroup}
+	} else {
+		// Fallback: load from DB
+		user, err := model.GetUserById(c.GetInt("id"), false)
 		if err != nil {
 			return modelListGroups{}, err
 		}
+		base := user.ToBaseUser()
+		userGroupList = model.GetUserGroupList(base)
+		userGroup = base.Group
 	}
 
 	if tokenGroup == "auto" {
 		return modelListGroups{
 			userGroup:   userGroup,
 			tokenGroup:  tokenGroup,
-			ownerGroups: service.GetUserAutoGroup(userGroup),
+			ownerGroups: service.GetUserAutoGroup(userGroupList),
 		}, nil
 	}
 
@@ -256,7 +267,15 @@ func ListModels(c *gin.Context, modelType int) {
 				}
 			}
 		} else {
-			models = model.GetGroupEnabledModels(ownerGroups[0])
+			// Collect models from all groups the user belongs to
+			for _, grp := range ownerGroups {
+				groupModels := model.GetGroupEnabledModels(grp)
+				for _, g := range groupModels {
+					if !common.StringsContains(models, g) {
+						models = append(models, g)
+					}
+				}
+			}
 		}
 		for _, modelName := range models {
 			if !acceptUnsetRatioModel {

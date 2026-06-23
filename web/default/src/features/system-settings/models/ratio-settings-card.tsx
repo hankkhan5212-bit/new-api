@@ -125,6 +125,7 @@ const createGroupSchema = (t: Translate) =>
     DefaultUseAutoGroup: z.boolean(),
     GroupSpecialUsableGroup: createJsonStringField(t),
     ModelGroupRatio: createJsonStringField(t),
+    MultiGroupStrategy: z.string().optional(),
   })
 
 type ModelFormValues = z.infer<ReturnType<typeof createModelSchema>>
@@ -197,6 +198,7 @@ export function RatioSettingsCard({
       groupDefaults.GroupSpecialUsableGroup
     ),
     ModelGroupRatio: normalizeJsonString(groupDefaults.ModelGroupRatio),
+    MultiGroupStrategy: groupDefaults.MultiGroupStrategy,
   })
   const modelSchema = useMemo(() => createModelSchema(t), [t])
   const groupSchema = useMemo(() => createGroupSchema(t), [t])
@@ -235,6 +237,7 @@ export function RatioSettingsCard({
         groupDefaults.GroupSpecialUsableGroup
       ),
       ModelGroupRatio: formatJsonForTextarea(groupDefaults.ModelGroupRatio),
+      MultiGroupStrategy: groupDefaults.MultiGroupStrategy,
     },
   })
 
@@ -285,6 +288,7 @@ export function RatioSettingsCard({
         groupDefaults.GroupSpecialUsableGroup
       ),
       ModelGroupRatio: normalizeJsonString(groupDefaults.ModelGroupRatio),
+      MultiGroupStrategy: groupDefaults.MultiGroupStrategy,
     }
 
     groupForm.reset({
@@ -298,6 +302,7 @@ export function RatioSettingsCard({
         groupDefaults.GroupSpecialUsableGroup
       ),
       ModelGroupRatio: formatJsonForTextarea(groupDefaults.ModelGroupRatio),
+      MultiGroupStrategy: groupDefaults.MultiGroupStrategy,
     })
   }, [groupDefaults, groupForm])
 
@@ -357,6 +362,7 @@ export function RatioSettingsCard({
           values.GroupSpecialUsableGroup
         ),
         ModelGroupRatio: normalizeJsonString(values.ModelGroupRatio),
+        MultiGroupStrategy: values.MultiGroupStrategy,
       }
 
       // Map form field names to API keys (most are 1:1, except GroupSpecialUsableGroup)
@@ -364,6 +370,7 @@ export function RatioSettingsCard({
         GroupSpecialUsableGroup:
           'group_ratio_setting.group_special_usable_group',
         ModelGroupRatio: 'group_ratio_setting.model_group_ratio',
+        MultiGroupStrategy: 'group_ratio_setting.multi_group_strategy',
       }
 
       const updates = (

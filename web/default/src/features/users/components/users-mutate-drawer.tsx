@@ -358,6 +358,26 @@ export function UsersMutateDrawer({
 
                   <FormField
                     control={form.control}
+                    name='groups_input'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Additional Groups')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={t('Comma-separated group names, e.g. vip,tx')}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Enter additional groups as comma-separated names. The primary group above is always included.')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name='quota_dollars'
                     render={({ field }) => (
                       <FormItem>

@@ -41,6 +41,7 @@ type User struct {
 	UsedQuota        int            `json:"used_quota" gorm:"type:int;default:0;column:used_quota"` // used quota
 	RequestCount     int            `json:"request_count" gorm:"type:int;default:0;"`               // request number
 	Group            string         `json:"group" gorm:"type:varchar(64);default:'default'"`
+	Groups           string         `json:"groups,omitempty" gorm:"type:text"` // JSON array of group names, e.g. ["vip","tx"]
 	AffCode          string         `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
 	AffCount         int            `json:"aff_count" gorm:"type:int;default:0;column:aff_count"`
 	AffQuota         int            `json:"aff_quota" gorm:"type:int;default:0;column:aff_quota"`           // 邀请剩余额度
@@ -59,6 +60,7 @@ func (user *User) ToBaseUser() *UserBase {
 	cache := &UserBase{
 		Id:       user.Id,
 		Group:    user.Group,
+		Groups:   user.Groups,
 		Quota:    user.Quota,
 		Status:   user.Status,
 		Username: user.Username,
@@ -527,6 +529,7 @@ func (user *User) Edit(updatePassword bool) error {
 		"username":     newUser.Username,
 		"display_name": newUser.DisplayName,
 		"group":        newUser.Group,
+		"groups":       newUser.Groups,
 		"remark":       newUser.Remark,
 	}
 	if updatePassword {
@@ -816,6 +819,24 @@ func GetUserUsedQuota(id int) (quota int, err error) {
 func GetUserEmail(id int) (email string, err error) {
 	err = DB.Model(&User{}).Where("id = ?", id).Select("email").Find(&email).Error
 	return email, err
+}
+
+// GetUserGroupList returns all groups a user belongs to as a slice.
+// Parses the Groups JSON field; falls back to the legacy Group field if Groups is empty.
+func GetUserGroupList(user *UserBase) []string {
+	if user == nil {
+		return []string{"default"}
+	}
+	if user.Groups != "" {
+		var groups []string
+		if err := json.Unmarshal([]byte(user.Groups), &groups); err == nil && len(groups) > 0 {
+			return groups
+		}
+	}
+	if user.Group != "" {
+		return []string{user.Group}
+	}
+	return []string{"default"}
 }
 
 // GetUserGroup gets group from Redis first, falls back to DB if needed

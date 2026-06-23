@@ -93,6 +93,7 @@ const EditUserModal = (props) => {
     quota: 0,
     quota_amount: 0,
     group: 'default',
+    groups: '[]',
     remark: '',
   });
 
@@ -117,6 +118,15 @@ const EditUserModal = (props) => {
       data.quota_amount = Number(
         quotaToDisplayAmount(data.quota || 0).toFixed(6),
       );
+      // Parse multi-group: convert groups JSON string to array for multi-select
+      if (data.groups && typeof data.groups === 'string') {
+        try {
+          const parsed = JSON.parse(data.groups);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            data.group = parsed; // multi-select expects array
+          }
+        } catch {} // ignore parse errors, fallback to single group
+      }
       setInputs({ ...getInitValues(), ...data });
     } else {
       showError(message);
@@ -150,6 +160,18 @@ const EditUserModal = (props) => {
     let payload = { ...values };
     delete payload.quota;
     delete payload.quota_amount;
+    // Handle multi-group: groups is the full list, group is first for backward compat
+    const groupVal = payload.group;
+    if (Array.isArray(groupVal) && groupVal.length > 0) {
+      payload.groups = JSON.stringify(groupVal);
+      payload.group = groupVal[0];
+    } else if (typeof groupVal === 'string' && groupVal) {
+      payload.groups = JSON.stringify([groupVal]);
+      payload.group = groupVal;
+    } else {
+      payload.groups = '[]';
+      payload.group = 'default';
+    }
     if (userId) {
       payload.id = parseInt(userId);
     }
@@ -360,10 +382,10 @@ const EditUserModal = (props) => {
                         <Form.Select
                           field='group'
                           label={t('分组')}
-                          placeholder={t('请选择分组')}
+                          placeholder={t('请选择分组（可多选）')}
                           optionList={groupOptions}
-                          allowAdditions
-                          search
+                          multiple
+                          filter
                           rules={[{ required: true, message: t('请选择分组') }]}
                         />
                       </Col>

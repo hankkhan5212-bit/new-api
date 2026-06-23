@@ -228,10 +228,24 @@ export function useUsersColumns(): ColumnDef<User>[] {
       header: t('Group'),
       cell: ({ row }) => {
         const group = row.getValue('group') as string
+        const groupsRaw = row.original.groups as string | undefined
+        let groups: string[] = []
+        if (groupsRaw) {
+          try {
+            groups = JSON.parse(groupsRaw)
+          } catch {}
+        }
+        if (groups.length === 0) {
+          groups = [group || 'default']
+        }
         return (
-          <BadgeCell>
-            <GroupBadge group={group} />
-          </BadgeCell>
+          <div className='flex flex-wrap gap-1'>
+            {groups.map((g) => (
+              <BadgeCell key={g}>
+                <GroupBadge group={g} />
+              </BadgeCell>
+            ))}
+          </div>
         )
       },
       filterFn: (row, id, value) => {

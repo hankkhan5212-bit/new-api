@@ -47,6 +47,7 @@ type GroupRatioSetting struct {
 	GroupGroupRatio         *types.RWMap[string, map[string]float64] `json:"group_group_ratio"`
 	GroupSpecialUsableGroup *types.RWMap[string, map[string]string]  `json:"group_special_usable_group"`
 	ModelGroupRatio         *types.RWMap[string, map[string]float64] `json:"model_group_ratio"`
+	MultiGroupStrategy      string                                   `json:"multi_group_strategy"` // "priority_order" (default) or "lowest_ratio"
 }
 
 var groupRatioSetting GroupRatioSetting
@@ -173,4 +174,20 @@ func UpdateModelGroupRatioByJSONString(jsonStr string) error {
 // GetModelGroupRatioCopy 返回模型分组倍率配置的副本。
 func GetModelGroupRatioCopy() map[string]map[string]float64 {
 	return modelGroupRatioMap.ReadAll()
+}
+
+// GetMultiGroupStrategy returns the multi-group selection strategy.
+// "priority_order" (default): use token group first / auto order.
+// "lowest_ratio": prefer groups with lower model_group_ratio for the request model.
+func GetMultiGroupStrategy() string {
+	if strategy := groupRatioSetting.MultiGroupStrategy; strategy == "lowest_ratio" {
+		return strategy
+	}
+	return "priority_order"
+}
+
+// GetModelGroupRatioForGroup returns the model_group_ratio for a specific group and model.
+// Falls back to GetGroupRatio(group) if no model-level override exists.
+func GetModelGroupRatioForGroup(group, model string) float64 {
+	return GetModelGroupRatio(group, model)
 }
