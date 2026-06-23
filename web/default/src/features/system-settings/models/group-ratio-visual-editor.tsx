@@ -35,7 +35,6 @@ import {
 } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { StaticDataTable } from '@/components/data-table'
 import { Dialog } from '@/components/dialog'
 import { safeJsonParse } from '../utils/json-parser'
@@ -65,6 +64,12 @@ type GroupPricingRow = {
 
 type GroupOverride = {
   targetGroup: string
+  ratio: number
+}
+
+type ModelGroupRatioEntry = {
+  group: string
+  model: string
   ratio: number
 }
 
@@ -181,6 +186,12 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
   const [userGroupDialogOpen, setUserGroupDialogOpen] = useState(false)
   const [userGroupInput, setUserGroupInput] = useState('')
 
+  const [modelGroupRatioDialogOpen, setModelGroupRatioDialogOpen] = useState(false)
+  const [modelGroupRatioEditData, setModelGroupRatioEditData] = useState<ModelGroupRatioEntry | null>(null)
+  const [modelGroupRatioGroupInput, setModelGroupRatioGroupInput] = useState('')
+  const [modelGroupRatioModelInput, setModelGroupRatioModelInput] = useState('')
+  const [modelGroupRatioRatioInput, setModelGroupRatioRatioInput] = useState('')
+
   // Parse topup group ratios
   const topupRatioList = useMemo(() => {
     const map = safeJsonParse<Record<string, number>>(topupGroupRatio, {
@@ -218,6 +229,21 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
       })),
     }))
   }, [groupGroupRatio])
+
+  // Parse model-group ratios
+  const modelGroupRatioList = useMemo(() => {
+    const map = safeJsonParse<Record<string, Record<string, number>>>(
+      modelGroupRatio,
+      { fallback: {}, context: 'model group ratios' }
+    )
+    const entries: ModelGroupRatioEntry[] = []
+    for (const [group, models] of Object.entries(map)) {
+      for (const [model, ratio] of Object.entries(models)) {
+        entries.push({ group, model, ratio })
+      }
+    }
+    return entries
+  }, [modelGroupRatio])
 
   // Simple group handlers (for groupRatio and topupGroupRatio)
   const handleSimpleAdd = (type: 'groupRatio' | 'topupGroupRatio') => {
@@ -395,6 +421,54 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
     }
 
     onChange('GroupGroupRatio', JSON.stringify(map, null, 2))
+  }
+
+  // Model group ratio handlers
+  const handleModelGroupRatioAdd = () => {
+    setModelGroupRatioEditData(null)
+    setModelGroupRatioGroupInput('')
+    setModelGroupRatioModelInput('')
+    setModelGroupRatioRatioInput('1')
+    setModelGroupRatioDialogOpen(true)
+  }
+
+  const handleModelGroupRatioEdit = (entry: ModelGroupRatioEntry) => {
+    setModelGroupRatioEditData(entry)
+    setModelGroupRatioGroupInput(entry.group)
+    setModelGroupRatioModelInput(entry.model)
+    setModelGroupRatioRatioInput(String(entry.ratio))
+    setModelGroupRatioDialogOpen(true)
+  }
+
+  const handleModelGroupRatioSave = () => {
+    const group = modelGroupRatioGroupInput.trim()
+    const model = modelGroupRatioModelInput.trim()
+    const ratio = Number(modelGroupRatioRatioInput)
+    if (!group || !model || !Number.isFinite(ratio)) return
+
+    const map = safeJsonParse<Record<string, Record<string, number>>>(
+      modelGroupRatio,
+      { fallback: {}, silent: true }
+    )
+    if (!map[group]) map[group] = {}
+    map[group][model] = ratio
+
+    onChange('ModelGroupRatio', JSON.stringify(map, null, 2))
+    setModelGroupRatioDialogOpen(false)
+  }
+
+  const handleModelGroupRatioDelete = (entry: ModelGroupRatioEntry) => {
+    const map = safeJsonParse<Record<string, Record<string, number>>>(
+      modelGroupRatio,
+      { fallback: {}, silent: true }
+    )
+    if (map[entry.group]) {
+      delete map[entry.group][entry.model]
+      if (Object.keys(map[entry.group]).length === 0) {
+        delete map[entry.group]
+      }
+    }
+    onChange('ModelGroupRatio', JSON.stringify(map, null, 2))
   }
 
   return (
@@ -662,18 +736,66 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
           <CardTitle>{t('Model group ratio overrides')}</CardTitle>
           <CardDescription>
             {t(
-              'Set per-model ratio overrides within a group. Models not listed here will use the group default ratio. Format: group → model → ratio. Example:'
+              'Set per-model ratio overrides within a group. Models not listed here will use the group default ratio. Format: group \u2192 model \u2192 ratio. Example:'
             )}
             {` { "vip": { "gpt-4": 0.8, "claude": 1.2 } }`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Textarea
-            rows={8}
-            value={modelGroupRatio}
-            onChange={(e) => onChange('ModelGroupRatio', e.target.value)}
-            placeholder='{ "vip": { "gpt-4": 0.8 } }'
-          />
+          <div className='space-y-4'>
+            <Button onClick={handleModelGroupRatioAdd} size='sm'>
+              <Plus className='mr-2 h-4 w-4' />
+              {t('Add')}
+            </Button>
+            {modelGroupRatioList.length > 0 && (
+              <StaticDataTable
+                data={modelGroupRatioList}
+                getRowKey={(entry) => `${entry.group}:${entry.model}`}
+                columns={[
+                  {
+                    id: 'group',
+                    header: t('Group'),
+                    cellClassName: 'font-medium',
+                    cell: (entry) => entry.group,
+                  },
+                  {
+                    id: 'model',
+                    header: t('Model'),
+                    cell: (entry) => entry.model,
+                  },
+                  {
+                    id: 'ratio',
+                    header: t('Ratio'),
+                    cell: (entry) => entry.ratio,
+                  },
+                  {
+                    id: 'actions',
+                    header: t('Actions'),
+                    className: 'text-right',
+                    cellClassName: 'text-right',
+                    cell: (entry) => (
+                      <div className='flex justify-end gap-2'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleModelGroupRatioEdit(entry)}
+                        >
+                          <Pencil className='h-4 w-4' />
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleModelGroupRatioDelete(entry)}
+                        >
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -747,6 +869,56 @@ export const GroupRatioVisualEditor = memo(function GroupRatioVisualEditor({
               value={userGroupInput}
               onChange={(e) => setUserGroupInput(e.target.value)}
               placeholder={t('vip')}
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Model Group Ratio Dialog */}
+      <Dialog
+        open={modelGroupRatioDialogOpen}
+        onOpenChange={setModelGroupRatioDialogOpen}
+        title={modelGroupRatioEditData ? t('Edit') : t('Add')}
+        description={t('Configure a per-model ratio override for a specific group.')}
+        contentHeight='auto'
+        bodyClassName='space-y-4'
+        footer={
+          <>
+            <Button
+              variant='outline'
+              onClick={() => setModelGroupRatioDialogOpen(false)}
+            >
+              {t('Cancel')}
+            </Button>
+            <Button onClick={handleModelGroupRatioSave}>
+              {modelGroupRatioEditData ? t('Save') : t('Add')}
+            </Button>
+          </>
+        }
+      >
+        <div className='space-y-4 py-4'>
+          <div className='space-y-2'>
+            <Label>{t('Group')}</Label>
+            <Input
+              value={modelGroupRatioGroupInput}
+              onChange={(e) => setModelGroupRatioGroupInput(e.target.value)}
+              placeholder='vip'
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label>{t('Model')}</Label>
+            <Input
+              value={modelGroupRatioModelInput}
+              onChange={(e) => setModelGroupRatioModelInput(e.target.value)}
+              placeholder='gpt-4'
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label>{t('Ratio')}</Label>
+            <Input
+              value={modelGroupRatioRatioInput}
+              onChange={(e) => setModelGroupRatioRatioInput(e.target.value)}
+              placeholder='0.8'
             />
           </div>
         </div>
