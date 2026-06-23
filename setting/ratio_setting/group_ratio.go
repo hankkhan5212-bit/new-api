@@ -116,6 +116,17 @@ func GetGroupGroupRatio(userGroup, usingGroup string) (float64, bool) {
 	return ratio, true
 }
 
+// GetGroupGroupRatioForUser checks GroupGroupRatio against ALL user groups (supports multi-group users).
+// Returns the first match found, or -1, false if no override is configured for any user group.
+func GetGroupGroupRatioForUser(userGroups []string, usingGroup string) (float64, bool) {
+	for _, ug := range userGroups {
+		if ratio, ok := GetGroupGroupRatio(ug, usingGroup); ok {
+			return ratio, true
+		}
+	}
+	return -1, false
+}
+
 func GroupGroupRatio2JSONString() string {
 	return groupGroupRatioMap.MarshalJSONString()
 }

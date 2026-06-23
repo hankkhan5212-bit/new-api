@@ -90,8 +90,9 @@ type RelayInfo struct {
 	TokenKey          string
 	TokenGroup        string
 	UserId            int
-	UsingGroup        string // 使用的分组，当auto跨分组重试时，会变动
-	UserGroup         string // 用户所在分组
+	UsingGroup        string   // 使用的分组，当auto跨分组重试时，会变动
+	UserGroup         string   // 用户主分组
+	UserGroups        []string // 用户所有分组（支持多分组）
 	TokenUnlimited    bool
 	StartTime         time.Time
 	FirstResponseTime time.Time
@@ -424,6 +425,19 @@ func GenRelayInfoImage(c *gin.Context, request dto.Request) *RelayInfo {
 	return info
 }
 
+// getUserGroupsFromCtx extracts the user multi-group list from gin context.
+func getUserGroupsFromCtx(c *gin.Context) []string {
+	raw, ok := common.GetContextKey(c, constant.ContextKeyUserGroups)
+	if !ok {
+		return nil
+	}
+	groups, ok := raw.([]string)
+	if !ok {
+		return nil
+	}
+	return groups
+}
+
 func GenRelayInfoOpenAI(c *gin.Context, request dto.Request) *RelayInfo {
 	info := genBaseRelayInfo(c, request)
 	info.RelayFormat = types.RelayFormatOpenAI
@@ -467,6 +481,7 @@ func genBaseRelayInfo(c *gin.Context, request dto.Request) *RelayInfo {
 		UserId:     common.GetContextKeyInt(c, constant.ContextKeyUserId),
 		UsingGroup: common.GetContextKeyString(c, constant.ContextKeyUsingGroup),
 		UserGroup:  common.GetContextKeyString(c, constant.ContextKeyUserGroup),
+		UserGroups: getUserGroupsFromCtx(c),
 		UserQuota:  common.GetContextKeyInt(c, constant.ContextKeyUserQuota),
 		UserEmail:  common.GetContextKeyString(c, constant.ContextKeyUserEmail),
 

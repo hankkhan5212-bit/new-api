@@ -54,16 +54,15 @@ func GroupInUserUsableGroups(userGroups []string, groupName string) bool {
 	return ok
 }
 
-// GetUserAutoGroup 根据用户分组列表获取自动分组设置
+// GetUserAutoGroup returns the user's own groups as the auto groups list.
+// Each user's auto groups are their own assigned groups, no global auto groups config needed.
 func GetUserAutoGroup(userGroups []string) []string {
-	groups := GetUserUsableGroups(userGroups)
-	autoGroups := make([]string, 0)
-	for _, group := range setting.GetAutoGroups() {
-		if _, ok := groups[group]; ok {
-			autoGroups = append(autoGroups, group)
-		}
+	if len(userGroups) == 0 {
+		return []string{}
 	}
-	return autoGroups
+	result := make([]string, len(userGroups))
+	copy(result, userGroups)
+	return result
 }
 
 // GetUserGroupRatio 获取用户使用某个分组的倍率

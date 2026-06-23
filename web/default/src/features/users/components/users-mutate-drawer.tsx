@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { formatQuota, parseQuotaFromDollars } from '@/lib/format'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -37,14 +38,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Sheet,
   SheetClose,
@@ -322,54 +315,51 @@ export function UsersMutateDrawer({
 
                   <FormField
                     control={form.control}
-                    name='group'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('Group')}</FormLabel>
-                        <Select
-                          items={[
-                            ...groups.map((group) => ({
-                              value: group,
-                              label: group,
-                            })),
-                          ]}
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder={t('Select a group')} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent alignItemWithTrigger={false}>
-                            <SelectGroup>
-                              {groups.map((group) => (
-                                <SelectItem key={group} value={group}>
-                                  {group}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name='groups_input'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('Additional Groups')}</FormLabel>
+                        <FormLabel>{t('Groups')}</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
-                            placeholder={t('Comma-separated group names, e.g. vip,tx')}
-                          />
+                          <div className='rounded-lg border p-3 space-y-2 max-h-48 overflow-y-auto'>
+                            {groups.length === 0 && (
+                              <p className='text-sm text-muted-foreground'>{t('No groups available')}</p>
+                            )}
+                            {groups.map((group) => {
+                              const selected = field.value
+                                ? field.value.split(',').map((s: string) => s.trim()).filter(Boolean)
+                                : []
+                              const checked = selected.includes(group)
+                              return (
+                                <label
+                                  key={group}
+                                  className='flex items-center gap-2 cursor-pointer text-sm'
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(c) => {
+                                      const current = field.value
+                                        ? field.value.split(',').map((s: string) => s.trim()).filter(Boolean)
+                                        : []
+                                      let next: string[]
+                                      if (c) {
+                                        next = current.includes(group) ? current : [...current, group]
+                                      } else {
+                                        next = current.filter((g: string) => g !== group)
+                                      }
+                                      const value = next.join(',')
+                                      field.onChange(value)
+                                      // Also update primary group to first selected
+                                      form.setValue('group', next[0] || 'default')
+                                    }}
+                                  />
+                                  <span>{group}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
                         </FormControl>
                         <FormDescription>
-                          {t('Enter additional groups as comma-separated names. The primary group above is always included.')}
+                          {t('Select one or more groups. The first selected group is used as the primary group.')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

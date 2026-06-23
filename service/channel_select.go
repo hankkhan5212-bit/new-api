@@ -7,7 +7,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 )
@@ -88,15 +87,15 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 	userGroup := common.GetContextKeyString(param.Ctx, constant.ContextKeyUserGroup)
 
 	if param.TokenGroup == "auto" {
-		if len(setting.GetAutoGroups()) == 0 {
-			return nil, selectGroup, errors.New("auto groups is not enabled")
-		}
 		userGroupsRaw, _ := common.GetContextKey(param.Ctx, constant.ContextKeyUserGroups)
 		var autoGroups []string
 		if raw, ok := userGroupsRaw.([]string); ok && len(raw) > 0 {
-			autoGroups = GetUserAutoGroup(raw)
+			autoGroups = raw
 		} else {
-			autoGroups = GetUserAutoGroup([]string{userGroup})
+			autoGroups = []string{userGroup}
+		}
+		if len(autoGroups) == 0 {
+			return nil, selectGroup, errors.New("user has no groups assigned")
 		}
 
 		// startGroupIndex: the group index to start searching from
