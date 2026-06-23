@@ -148,9 +148,9 @@ const EditTokenModal = (props) => {
         }
       }
       setGroups(localGroupOptions);
-      // if (statusState?.status?.default_use_auto_group && formApiRef.current) {
-      //   formApiRef.current.setValue('group', 'auto');
-      // }
+      if (statusState?.status?.default_use_auto_group && formApiRef.current) {
+        formApiRef.current.setValue('group', 'auto');
+      }
     } else {
       showError(t(message));
     }
