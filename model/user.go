@@ -823,40 +823,25 @@ func GetUserEmail(id int) (email string, err error) {
 
 // UserGroupEntry represents a user's group assignment with per-group settings.
 type UserGroupEntry struct {
-	Group     string  `json:"group"`
-	Ratio     float64 `json:"ratio,omitempty"`      // group-level ratio override (0 = use global)
-	ChannelId int     `json:"channel_id,omitempty"` // 1:1 channel binding (0 = use abilities table)
+	Group      string  `json:"group"`
+	Ratio      float64 `json:"ratio,omitempty"`       // group-level ratio override (0 = use global default)
+	ChannelIds []int   `json:"channel_ids,omitempty"` // bound channels (empty = use global abilities table)
 }
 
-// parseGroupsJSON parses the Groups JSON field supporting both legacy and new formats.
-// Legacy: ["vip","tx"]
-// New: [{"group":"vip","ratio":0.5,"channel_id":3}]
+// parseGroupsJSON parses the Groups JSON field.
+// Format: [{"group":"vip","ratio":0.5,"channel_ids":[3,7]}]
 func parseGroupsJSON(groupsJSON string) []UserGroupEntry {
 	if groupsJSON == "" {
 		return nil
 	}
-	// Try new format first: array of objects
 	var entries []UserGroupEntry
-	if err := json.Unmarshal([]byte(groupsJSON), &entries); err == nil && len(entries) > 0 {
-		// Check if first entry has a Group field (new format) or is a plain string (legacy)
-		if entries[0].Group != "" {
-			return entries
-		}
+	if err := json.Unmarshal([]byte(groupsJSON), &entries); err != nil {
+		return nil
 	}
-	// Legacy format: array of strings
-	var legacyGroups []string
-	if err := json.Unmarshal([]byte(groupsJSON), &legacyGroups); err == nil && len(legacyGroups) > 0 {
-		entries = make([]UserGroupEntry, len(legacyGroups))
-		for i, g := range legacyGroups {
-			entries[i] = UserGroupEntry{Group: g}
-		}
-		return entries
-	}
-	return nil
+	return entries
 }
 
-// GetUserGroupList returns all group names a user belongs to as a []string.
-// Supports both legacy ["vip"] and new [{"group":"vip"}] formats.
+// GetUserGroupList returns all group names a user belongs to.
 func GetUserGroupList(user *UserBase) []string {
 	if user == nil {
 		return []string{"default"}
@@ -883,32 +868,33 @@ func GetUserGroupEntries(user *UserBase) []UserGroupEntry {
 	return parseGroupsJSON(user.Groups)
 }
 
-// GetUserGroupChannelMap returns a map from group name to channel_id for 1:1 bindings.
-// Only includes entries with ChannelId > 0.
-func GetUserGroupChannelMap(user *UserBase) map[string]int {
+// GetUserGroupChannelMap returns a flat set of all channel_ids used across any group for this user.
+// Used for cross-group channel deduplication.
+func GetUserGroupChannelMap(user *UserBase) map[int]bool {
 	entries := parseGroupsJSON(user.Groups)
-	result := make(map[string]int, len(entries))
+	result := make(map[int]bool)
 	for _, e := range entries {
-		if e.ChannelId > 0 {
-			result[e.Group] = e.ChannelId
+		for _, cid := range e.ChannelIds {
+			if cid > 0 {
+				result[cid] = true
+			}
 		}
 	}
 	return result
 }
 
-// GetUserGroupChannelForGroup returns the channel_id bound to a specific group for this user.
-// Returns 0 if no binding exists.
-func GetUserGroupChannelForGroup(user *UserBase, group string) int {
+// GetUserGroupChannelIdsForGroup returns the channel_ids bound to a specific group for this user.
+func GetUserGroupChannelIdsForGroup(user *UserBase, group string) []int {
 	entries := parseGroupsJSON(user.Groups)
 	for _, e := range entries {
-		if e.Group == group && e.ChannelId > 0 {
-			return e.ChannelId
+		if e.Group == group {
+			return e.ChannelIds
 		}
 	}
-	return 0
+	return nil
 }
 
-// GetUserGroupPersonalRatio returns the per-group ratio set by the user for a specific group.
+// GetUserGroupPersonalRatio returns the per-group ratio set for a specific group.
 // Returns 0 if no custom ratio is configured (meaning "use global default").
 func GetUserGroupPersonalRatio(user *UserBase, group string) float64 {
 	entries := parseGroupsJSON(user.Groups)

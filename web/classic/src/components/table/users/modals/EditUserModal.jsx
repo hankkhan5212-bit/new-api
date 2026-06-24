@@ -142,15 +142,15 @@ const EditUserModal = (props) => {
           const parsed = JSON.parse(data.groups);
           if (Array.isArray(parsed) && parsed.length > 0) {
             if (typeof parsed[0] === 'object') {
-              setGroupEntries(parsed.map(g => ({ group: g.group || '', ratio: g.ratio || 1, channel_id: g.channel_id || 0 })));
+              setGroupEntries(parsed.map(g => ({ group: g.group || '', ratio: g.ratio || 1, channel_ids: g.channel_ids || [] })));
             } else {
               // Legacy string array
-              setGroupEntries(parsed.map(g => ({ group: g, ratio: 1, channel_id: 0 })));
+              setGroupEntries(parsed.map(g => ({ group: g, ratio: 1, channel_ids: [] })));
             }
           }
         } catch {}
       } else {
-        setGroupEntries([{ group: data.group || 'default', ratio: 1, channel_id: 0 }]);
+        setGroupEntries([{ group: data.group || 'default', ratio: 1, channel_ids: [] }]);
       }
       setInputs({ ...getInitValues(), ...data });
     } else {
@@ -191,7 +191,7 @@ const EditUserModal = (props) => {
       payload.groups = JSON.stringify(groupEntries.map(g => ({
         group: g.group,
         ratio: Number(g.ratio) || 1,
-        channel_id: Number(g.channel_id) || 0,
+        channel_ids: g.channel_ids || [],
       })));
       payload.group = groupEntries[0].group || 'default';
     } else {
@@ -416,7 +416,7 @@ const EditUserModal = (props) => {
                             size='small' 
                             theme='light'
                             onClick={() => {
-                              setGroupEntries([...groupEntries, { group: '', ratio: 1, channel_id: 0 }]);
+                              setGroupEntries([...groupEntries, { group: '', ratio: 1, channel_ids: [] }]);
                             }}
                           >
                             + {t('添加分组')}
@@ -450,16 +450,20 @@ const EditUserModal = (props) => {
                             />
                             <Select
                               placeholder={t('渠道')}
-                              value={String(entry.channel_id || '')}
-                              optionList={channelOptions}
+                              value={entry.channel_ids ? entry.channel_ids.map(String) : []}
+                              optionList={channelOptions.filter(c => 
+                                !entry.channel_ids || entry.channel_ids.includes(c.value) || 
+                                !groupEntries.some((ge) => ge.channel_ids && ge.channel_ids.includes(c.value))
+                              )}
                               filter
+                              multiple
                               showClear
                               onChange={(v) => {
                                 const next = [...groupEntries];
-                                next[idx] = { ...next[idx], channel_id: v ? Number(v) : 0 };
+                                next[idx] = { ...next[idx], channel_ids: Array.isArray(v) ? v.map(Number) : (v ? [Number(v)] : []) };
                                 setGroupEntries(next);
                               }}
-                              style={{ width: 180 }}
+                              style={{ width: 200 }}
                             />
                             <Button
                               size='small'

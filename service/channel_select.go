@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// getChannelForGroup checks if the user has a 1:1 channel binding for this group.
-// If found, returns the channel directly (ignoring the global abilities table).
+// getChannelForGroup checks if the user has channel bindings for this group.
+// Tries each bound channel; returns the first enabled one.
 func getChannelForGroup(c *gin.Context, group string) *model.Channel {
 	userId := c.GetInt("id")
 	if userId == 0 {
@@ -22,16 +22,19 @@ func getChannelForGroup(c *gin.Context, group string) *model.Channel {
 	if err != nil {
 		return nil
 	}
-	channelId := model.GetUserGroupChannelForGroup(userCache, group)
-	if channelId <= 0 {
-		return nil
+	channelIds := model.GetUserGroupChannelIdsForGroup(userCache, group)
+	for _, channelId := range channelIds {
+		if channelId <= 0 {
+			continue
+		}
+		channel, err := model.GetChannelById(channelId, true)
+		if err != nil || channel == nil || channel.Status != common.ChannelStatusEnabled {
+			continue
+		}
+		logger.LogDebug(c, "Using user-bound channel %d for group %s", channelId, group)
+		return channel
 	}
-	channel, err := model.GetChannelById(channelId, true)
-	if err != nil || channel == nil || channel.Status != common.ChannelStatusEnabled {
-		return nil
-	}
-	logger.LogDebug(c, "Using user-bound channel %d for group %s", channelId, group)
-	return channel
+	return nil
 }
 
 type RetryParam struct {

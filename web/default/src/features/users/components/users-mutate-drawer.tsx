@@ -45,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MultiSelect } from '@/components/multi-select'
 import {
   Sheet,
   SheetClose,
@@ -92,7 +93,7 @@ export function UsersMutateDrawer({
   const { triggerRefresh } = useUsers()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [quotaDialogOpen, setQuotaDialogOpen] = useState(false)
-  const [groupEntries, setGroupEntries] = useState<Array<{group:string, ratio:number, channel_id:number}>>([])
+  const [groupEntries, setGroupEntries] = useState<Array<{group:string, ratio:number, channel_ids:number[]}>>([])
 
   // Fetch channels for group binding dropdown
   const { data: channelsData } = useQuery({
@@ -121,10 +122,10 @@ export function UsersMutateDrawer({
               if (Array.isArray(parsed) && parsed.length > 0) {
                 if (typeof parsed[0] === 'object') {
                   setGroupEntries(parsed.map((g: any) => ({
-                    group: g.group || '', ratio: g.ratio || 1, channel_id: g.channel_id || 0,
+                    group: g.group || '', ratio: g.ratio || 1, channel_ids: g.channel_ids || [],
                   })))
                 } else {
-                  setGroupEntries(parsed.map((g: string) => ({ group: g, ratio: 1, channel_id: 0 })))
+                  setGroupEntries(parsed.map((g: string) => ({ group: g, ratio: 1, channel_ids: [] })))
                 }
               }
             }
@@ -163,7 +164,7 @@ export function UsersMutateDrawer({
         enriched.groups_input = JSON.stringify(groupEntries.map(g => ({
           group: g.group,
           ratio: Number(g.ratio) || 1,
-          channel_id: Number(g.channel_id) || 0,
+          channel_ids: g.channel_ids || [],
         })))
         enriched.group = groupEntries[0].group || 'default'
       }
@@ -350,7 +351,7 @@ export function UsersMutateDrawer({
                     <div className='flex items-center justify-between'>
                       <p className='text-sm text-muted-foreground'>{t('Configure group name, ratio and bound channel')}</p>
                       <Button type='button' size='sm' variant='outline'
-                        onClick={() => setGroupEntries([...groupEntries, { group: '', ratio: 1, channel_id: 0 }])}>
+                        onClick={() => setGroupEntries([...groupEntries, { group: '', ratio: 1, channel_ids: [] }])}>
                         + {t('Add')}
                       </Button>
                     </div>
@@ -379,34 +380,23 @@ export function UsersMutateDrawer({
                             setGroupEntries(next)
                           }}
                         />
-                        <Select
-                          items={[
-                            { value: 0, label: t('None') },
-                            ...channels.filter((ch: any) => 
-                              ch.id === entry.channel_id || !groupEntries.some((ge: any) => ge.channel_id === ch.id && ge.channel_id > 0)
-                            ).map((ch: any) => ({ value: ch.id, label: `${ch.name} (#${ch.id})` })),
-                          ]}
-                          onValueChange={(v) => {
+                        <MultiSelect
+                          placeholder={t('Channels')}
+                          options={channels
+                            .filter((ch: any) =>
+                              (entry.channel_ids || []).includes(ch.id) ||
+                              !groupEntries.some((ge: any) => (ge.channel_ids || []).includes(ch.id))
+                            )
+                            .map((ch: any) => ({ value: ch.id, label: `${ch.name} (#${ch.id})` }))
+                          }
+                          value={(entry.channel_ids || []).map(String)}
+                          onValueChange={(vals: string[]) => {
                             const next = [...groupEntries]
-                            next[idx] = { ...next[idx], channel_id: Number(v) || 0 }
+                            next[idx] = { ...next[idx], channel_ids: vals.map(Number) }
                             setGroupEntries(next)
                           }}
-                          value={entry.channel_id}
-                        >
-                          <FormControl>
-                            <SelectTrigger className='w-44'>
-                              <SelectValue placeholder={t('Channel')} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value={0}>{t('None')}</SelectItem>
-                            {channels.filter((ch: any) =>
-                              ch.id === entry.channel_id || !groupEntries.some((ge: any) => ge.channel_id === ch.id && ge.channel_id > 0)
-                            ).map((ch: any) => (
-                              <SelectItem key={ch.id} value={ch.id}>{ch.name} (#{ch.id})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className='w-56'
+                        />
                         <Button type='button' size='sm' variant='ghost'
                           onClick={() => setGroupEntries(groupEntries.filter((_, i) => i !== idx))}>
                           <Trash2 className='h-4 w-4' />

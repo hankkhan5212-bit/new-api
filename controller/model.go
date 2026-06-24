@@ -266,13 +266,13 @@ func ListModels(c *gin.Context, modelType int) {
 				}
 			}
 		}
-		// Also collect models from user-level channel bindings (1:1 group→channel)
+		// Also collect models from user-level channel bindings (group→channels)
 		userId := c.GetInt("id")
 		if userId > 0 {
 			userCache, err := model.GetUserCache(userId)
 			if err == nil {
-				channelMap := model.GetUserGroupChannelMap(userCache)
-				for _, channelId := range channelMap {
+				channelSet := model.GetUserGroupChannelMap(userCache)
+				for channelId := range channelSet {
 					channel, err := model.GetChannelById(channelId, true)
 					if err != nil || channel == nil {
 						continue
