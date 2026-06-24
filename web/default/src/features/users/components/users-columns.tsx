@@ -232,7 +232,14 @@ export function useUsersColumns(): ColumnDef<User>[] {
         let groups: string[] = []
         if (groupsRaw) {
           try {
-            groups = JSON.parse(groupsRaw)
+            const parsed = JSON.parse(groupsRaw)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              if (typeof parsed[0] === 'object') {
+                groups = parsed.map((g: any) => g.group || '')
+              } else {
+                groups = parsed
+              }
+            }
           } catch {}
         }
         if (groups.length === 0) {

@@ -116,13 +116,26 @@ func PreWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usag
 	}
 
 	actualGroupRatio := groupRatio
-	userGroupRatio, ok := ratio_setting.GetGroupGroupRatioForUser(relayInfo.UserGroups, relayInfo.UsingGroup)
-	if !ok {
-		// fallback: check legacy single user group
-		userGroupRatio, ok = ratio_setting.GetGroupGroupRatio(relayInfo.UserGroup, relayInfo.UsingGroup)
+
+	// Check user-level personal group ratio first (from UserGroupEntry.Ratio)
+	if relayInfo.UserId > 0 && relayInfo.UsingGroup != "" {
+		userCache, err := model.GetUserCache(relayInfo.UserId)
+		if err == nil {
+			if personalRatio := model.GetUserGroupPersonalRatio(userCache, relayInfo.UsingGroup); personalRatio > 0 {
+				actualGroupRatio = personalRatio
+			}
+		}
 	}
-	if ok {
-		actualGroupRatio = userGroupRatio
+
+	if actualGroupRatio == groupRatio {
+		userGroupRatio, ok := ratio_setting.GetGroupGroupRatioForUser(relayInfo.UserGroups, relayInfo.UsingGroup)
+		if !ok {
+			// fallback: check legacy single user group
+			userGroupRatio, ok = ratio_setting.GetGroupGroupRatio(relayInfo.UserGroup, relayInfo.UsingGroup)
+		}
+		if ok {
+			actualGroupRatio = userGroupRatio
+		}
 	}
 
 	quotaInfo := QuotaInfo{

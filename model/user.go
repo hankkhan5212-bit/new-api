@@ -821,22 +821,103 @@ func GetUserEmail(id int) (email string, err error) {
 	return email, err
 }
 
-// GetUserGroupList returns all groups a user belongs to as a slice.
-// Parses the Groups JSON field; falls back to the legacy Group field if Groups is empty.
+// UserGroupEntry represents a user's group assignment with per-group settings.
+type UserGroupEntry struct {
+	Group     string  `json:"group"`
+	Ratio     float64 `json:"ratio,omitempty"`      // group-level ratio override (0 = use global)
+	ChannelId int     `json:"channel_id,omitempty"` // 1:1 channel binding (0 = use abilities table)
+}
+
+// parseGroupsJSON parses the Groups JSON field supporting both legacy and new formats.
+// Legacy: ["vip","tx"]
+// New: [{"group":"vip","ratio":0.5,"channel_id":3}]
+func parseGroupsJSON(groupsJSON string) []UserGroupEntry {
+	if groupsJSON == "" {
+		return nil
+	}
+	// Try new format first: array of objects
+	var entries []UserGroupEntry
+	if err := json.Unmarshal([]byte(groupsJSON), &entries); err == nil && len(entries) > 0 {
+		// Check if first entry has a Group field (new format) or is a plain string (legacy)
+		if entries[0].Group != "" {
+			return entries
+		}
+	}
+	// Legacy format: array of strings
+	var legacyGroups []string
+	if err := json.Unmarshal([]byte(groupsJSON), &legacyGroups); err == nil && len(legacyGroups) > 0 {
+		entries = make([]UserGroupEntry, len(legacyGroups))
+		for i, g := range legacyGroups {
+			entries[i] = UserGroupEntry{Group: g}
+		}
+		return entries
+	}
+	return nil
+}
+
+// GetUserGroupList returns all group names a user belongs to as a []string.
+// Supports both legacy ["vip"] and new [{"group":"vip"}] formats.
 func GetUserGroupList(user *UserBase) []string {
 	if user == nil {
 		return []string{"default"}
 	}
-	if user.Groups != "" {
-		var groups []string
-		if err := json.Unmarshal([]byte(user.Groups), &groups); err == nil && len(groups) > 0 {
-			return groups
+	entries := parseGroupsJSON(user.Groups)
+	if len(entries) > 0 {
+		names := make([]string, len(entries))
+		for i, e := range entries {
+			names[i] = e.Group
 		}
+		return names
 	}
 	if user.Group != "" {
 		return []string{user.Group}
 	}
 	return []string{"default"}
+}
+
+// GetUserGroupEntries returns the full UserGroupEntry list for a user.
+func GetUserGroupEntries(user *UserBase) []UserGroupEntry {
+	if user == nil {
+		return nil
+	}
+	return parseGroupsJSON(user.Groups)
+}
+
+// GetUserGroupChannelMap returns a map from group name to channel_id for 1:1 bindings.
+// Only includes entries with ChannelId > 0.
+func GetUserGroupChannelMap(user *UserBase) map[string]int {
+	entries := parseGroupsJSON(user.Groups)
+	result := make(map[string]int, len(entries))
+	for _, e := range entries {
+		if e.ChannelId > 0 {
+			result[e.Group] = e.ChannelId
+		}
+	}
+	return result
+}
+
+// GetUserGroupChannelForGroup returns the channel_id bound to a specific group for this user.
+// Returns 0 if no binding exists.
+func GetUserGroupChannelForGroup(user *UserBase, group string) int {
+	entries := parseGroupsJSON(user.Groups)
+	for _, e := range entries {
+		if e.Group == group && e.ChannelId > 0 {
+			return e.ChannelId
+		}
+	}
+	return 0
+}
+
+// GetUserGroupPersonalRatio returns the per-group ratio set by the user for a specific group.
+// Returns 0 if no custom ratio is configured (meaning "use global default").
+func GetUserGroupPersonalRatio(user *UserBase, group string) float64 {
+	entries := parseGroupsJSON(user.Groups)
+	for _, e := range entries {
+		if e.Group == group && e.Ratio > 0 {
+			return e.Ratio
+		}
+	}
+	return 0
 }
 
 // GetUserGroup gets group from Redis first, falls back to DB if needed

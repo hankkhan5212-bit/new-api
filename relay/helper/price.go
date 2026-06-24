@@ -49,6 +49,17 @@ func HandleGroupRatio(ctx *gin.Context, relayInfo *relaycommon.RelayInfo) types.
 		relayInfo.UsingGroup = autoGroup.(string)
 	}
 
+	// Check user-level personal group ratio first (from UserGroupEntry.Ratio)
+	if relayInfo.UserId > 0 && relayInfo.UsingGroup != "" {
+		userCache, err := model.GetUserCache(relayInfo.UserId)
+		if err == nil {
+			if personalRatio := model.GetUserGroupPersonalRatio(userCache, relayInfo.UsingGroup); personalRatio > 0 {
+				groupRatioInfo.GroupRatio = personalRatio
+				return groupRatioInfo
+			}
+		}
+	}
+
 	// check user group special ratio
 	userGroupRatio, ok := ratio_setting.GetGroupGroupRatioForUser(relayInfo.UserGroups, relayInfo.UsingGroup)
 	if !ok {

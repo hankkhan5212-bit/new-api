@@ -11,6 +11,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// getChannelForGroup checks if the user has a 1:1 channel binding for this group.
+// If found, returns the channel directly (ignoring the global abilities table).
+func getChannelForGroup(c *gin.Context, group string) *model.Channel {
+	userId := c.GetInt("id")
+	if userId == 0 {
+		return nil
+	}
+	userCache, err := model.GetUserCache(userId)
+	if err != nil {
+		return nil
+	}
+	channelId := model.GetUserGroupChannelForGroup(userCache, group)
+	if channelId <= 0 {
+		return nil
+	}
+	channel, err := model.GetChannelById(channelId, true)
+	if err != nil || channel == nil || channel.Status != common.ChannelStatusEnabled {
+		return nil
+	}
+	logger.LogDebug(c, "Using user-bound channel %d for group %s", channelId, group)
+	return channel
+}
+
 type RetryParam struct {
 	Ctx          *gin.Context
 	TokenGroup   string
@@ -121,7 +144,11 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			}
 			logger.LogDebug(param.Ctx, "Auto selecting group: %s, priorityRetry: %d", autoGroup, priorityRetry)
 
-			channel, _ = model.GetRandomSatisfiedChannel(autoGroup, param.ModelName, priorityRetry)
+			// Check user-level channel binding first
+			channel = getChannelForGroup(param.Ctx, autoGroup)
+			if channel == nil {
+				channel, _ = model.GetRandomSatisfiedChannel(autoGroup, param.ModelName, priorityRetry)
+			}
 			if channel == nil {
 				// Current group has no available channel for this model, try next group
 				// 当前分组没有该模型的可用渠道，尝试下一个分组
@@ -174,10 +201,13 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			}
 		}
 
-		// Single group: unchanged behavior
+		// Single group: check user binding first
 		if len(groupList) <= 1 {
-			channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
-			if err != nil {
+			channel = getChannelForGroup(param.Ctx, param.TokenGroup)
+			if channel == nil {
+				channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
+			}
+			if err != nil && channel == nil {
 				return nil, param.TokenGroup, err
 			}
 		} else {
@@ -195,6 +225,9 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 					priorityRetry = 0
 				}
 				channel, _ = model.GetRandomSatisfiedChannel(g, param.ModelName, priorityRetry)
+				if channel == nil {
+					channel = getChannelForGroup(param.Ctx, g)
+				}
 				if channel == nil {
 					common.SetContextKey(param.Ctx, constant.ContextKeyAutoGroupIndex, i+1)
 					param.SetRetry(0)

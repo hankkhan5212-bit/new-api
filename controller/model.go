@@ -256,23 +256,32 @@ func ListModels(c *gin.Context, modelType int) {
 			userModelNames = append(userModelNames, allowModel)
 		}
 	} else {
+		// Collect and deduplicate models from all owner groups
 		var models []string
-		if groups.tokenGroup == "auto" {
-			for _, autoGroup := range ownerGroups {
-				groupModels := model.GetGroupEnabledModels(autoGroup)
-				for _, g := range groupModels {
-					if !common.StringsContains(models, g) {
-						models = append(models, g)
-					}
+		for _, grp := range ownerGroups {
+			groupModels := model.GetGroupEnabledModels(grp)
+			for _, g := range groupModels {
+				if !common.StringsContains(models, g) {
+					models = append(models, g)
 				}
 			}
-		} else {
-			// Collect models from all groups the user belongs to
-			for _, grp := range ownerGroups {
-				groupModels := model.GetGroupEnabledModels(grp)
-				for _, g := range groupModels {
-					if !common.StringsContains(models, g) {
-						models = append(models, g)
+		}
+		// Also collect models from user-level channel bindings (1:1 group→channel)
+		userId := c.GetInt("id")
+		if userId > 0 {
+			userCache, err := model.GetUserCache(userId)
+			if err == nil {
+				channelMap := model.GetUserGroupChannelMap(userCache)
+				for _, channelId := range channelMap {
+					channel, err := model.GetChannelById(channelId, true)
+					if err != nil || channel == nil {
+						continue
+					}
+					for _, m := range channel.GetModels() {
+						m = strings.TrimSpace(m)
+						if m != "" && !common.StringsContains(models, m) {
+							models = append(models, m)
+						}
 					}
 				}
 			}

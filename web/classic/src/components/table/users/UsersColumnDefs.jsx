@@ -342,11 +342,18 @@ export const getUsersColumns = ({
       title: t('分组'),
       dataIndex: 'group',
       render: (text, record, index) => {
-        // Parse multi-group from groups JSON string
+        // Parse multi-group from groups JSON string (supports both legacy and new format)
         let groups = []
         if (record.groups && typeof record.groups === 'string') {
           try {
-            groups = JSON.parse(record.groups)
+            const parsed = JSON.parse(record.groups)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              if (typeof parsed[0] === 'object') {
+                groups = parsed.map((g) => g.group || '')
+              } else {
+                groups = parsed
+              }
+            }
           } catch {}
         }
         if (groups.length === 0) {

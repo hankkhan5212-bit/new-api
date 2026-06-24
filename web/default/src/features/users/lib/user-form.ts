@@ -76,9 +76,20 @@ export function transformFormDataToPayload(
   } else {
     // For update: quota is adjusted atomically via /api/user/manage, not sent here
     payload.group = data.group
-    // Build groups from comma-separated input or fallback to single group
-    payload.groups = buildGroupsJSON(data.groups_input, data.group, DEFAULT_GROUP)
-    payload.group = payload.groups ? JSON.parse(payload.groups)[0] || DEFAULT_GROUP : (data.group || DEFAULT_GROUP)
+    // groups_input is either a comma-separated string or a full JSON array of UserGroupEntry objects
+    if (data.groups_input) {
+      // Try as JSON first (new format from groupEntries table)
+      try {
+        JSON.parse(data.groups_input)
+        payload.groups = data.groups_input
+      } catch {
+        // Legacy comma-separated format
+        payload.groups = buildGroupsJSON(data.groups_input, data.group, DEFAULT_GROUP)
+      }
+    }
+    payload.group = payload.groups ? (() => {
+      try { const arr = JSON.parse(payload.groups); return arr[0]?.group || arr[0] || DEFAULT_GROUP } catch { return DEFAULT_GROUP }
+    })() : (data.group || DEFAULT_GROUP)
     payload.remark = data.remark || undefined
     payload.id = userId
   }

@@ -44,7 +44,9 @@ import {
   Avatar,
   Row,
   Col,
+  Input,
   InputNumber,
+  Select,
   RadioGroup,
   Radio,
 } from '@douyinfe/semi-ui';
@@ -72,6 +74,8 @@ const EditUserModal = (props) => {
   const isMobile = useIsMobile();
   const [groupOptions, setGroupOptions] = useState([]);
   const [bindingModalVisible, setBindingModalVisible] = useState(false);
+  const [groupEntries, setGroupEntries] = useState([]);
+  const [channelOptions, setChannelOptions] = useState([]);
   const formApiRef = useRef(null);
   const [showAdjustQuotaRaw, setShowAdjustQuotaRaw] = useState(false);
   const [showQuotaInput, setShowQuotaInput] = useState(false);
@@ -93,7 +97,6 @@ const EditUserModal = (props) => {
     quota: 0,
     quota_amount: 0,
     group: 'default',
-    groups: '[]',
     remark: '',
   });
 
@@ -101,8 +104,23 @@ const EditUserModal = (props) => {
     try {
       let res = await API.get(`/api/group/`);
       setGroupOptions(res.data.data.map((g) => ({ label: g, value: g })));
-    } catch (e) {
-      showError(e.message);
+    } catch {
+      // ignore
+    }
+  };
+
+  const fetchChannels = async () => {
+    try {
+      let res = await API.get(`/api/channel/?p=0&page_size=200`);
+      if (res.data.success) {
+        const chs = ((res.data.data && res.data.data.items) || []).map((ch) => ({
+          label: `${ch.name} (#${ch.id})`,
+          value: ch.id,
+        }));
+        setChannelOptions(chs);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -118,14 +136,21 @@ const EditUserModal = (props) => {
       data.quota_amount = Number(
         quotaToDisplayAmount(data.quota || 0).toFixed(6),
       );
-      // Parse multi-group: convert groups JSON string to array for multi-select
+      // Parse multi-group entries from groups JSON
       if (data.groups && typeof data.groups === 'string') {
         try {
           const parsed = JSON.parse(data.groups);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            data.group = parsed; // multi-select expects array
+            if (typeof parsed[0] === 'object') {
+              setGroupEntries(parsed.map(g => ({ group: g.group || '', ratio: g.ratio || 1, channel_id: g.channel_id || 0 })));
+            } else {
+              // Legacy string array
+              setGroupEntries(parsed.map(g => ({ group: g, ratio: 1, channel_id: 0 })));
+            }
           }
-        } catch {} // ignore parse errors, fallback to single group
+        } catch {}
+      } else {
+        setGroupEntries([{ group: data.group || 'default', ratio: 1, channel_id: 0 }]);
       }
       setInputs({ ...getInitValues(), ...data });
     } else {
@@ -143,6 +168,7 @@ const EditUserModal = (props) => {
   useEffect(() => {
     loadUser();
     if (userId) fetchGroups();
+    fetchChannels();
     setBindingModalVisible(false);
   }, [props.editingUser.id]);
 
@@ -160,14 +186,14 @@ const EditUserModal = (props) => {
     let payload = { ...values };
     delete payload.quota;
     delete payload.quota_amount;
-    // Handle multi-group: groups is the full list, group is first for backward compat
-    const groupVal = payload.group;
-    if (Array.isArray(groupVal) && groupVal.length > 0) {
-      payload.groups = JSON.stringify(groupVal);
-      payload.group = groupVal[0];
-    } else if (typeof groupVal === 'string' && groupVal) {
-      payload.groups = JSON.stringify([groupVal]);
-      payload.group = groupVal;
+    // Build groups JSON from group entries
+    if (groupEntries.length > 0) {
+      payload.groups = JSON.stringify(groupEntries.map(g => ({
+        group: g.group,
+        ratio: Number(g.ratio) || 1,
+        channel_id: Number(g.channel_id) || 0,
+      })));
+      payload.group = groupEntries[0].group || 'default';
     } else {
       payload.groups = '[]';
       payload.group = 'default';
@@ -379,15 +405,77 @@ const EditUserModal = (props) => {
 
                     <Row gutter={12}>
                       <Col span={24}>
-                        <Form.Select
-                          field='group'
-                          label={t('分组')}
-                          placeholder={t('请选择分组（可多选）')}
-                          optionList={groupOptions}
-                          multiple
-                          filter
-                          rules={[{ required: true, message: t('请选择分组') }]}
-                        />
+                        <div style={{ marginBottom: 8 }}>
+                          <Text strong>{t('分组配置')}</Text>
+                          <Text type='tertiary' size='small' style={{ display: 'block', marginTop: 2 }}>
+                            {t('为每个分组配置名称、倍率和绑定渠道')}
+                          </Text>
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <Button 
+                            size='small' 
+                            theme='light'
+                            onClick={() => {
+                              setGroupEntries([...groupEntries, { group: '', ratio: 1, channel_id: 0 }]);
+                            }}
+                          >
+                            + {t('添加分组')}
+                          </Button>
+                        </div>
+                        {groupEntries.map((entry, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                            <Input
+                              placeholder={t('分组名')}
+                              value={entry.group}
+                              onChange={(v) => {
+                                const next = [...groupEntries];
+                                next[idx] = { ...next[idx], group: v };
+                                setGroupEntries(next);
+                              }}
+                              style={{ width: 130 }}
+                            />
+                            <InputNumber
+                              placeholder={t('倍率')}
+                              value={entry.ratio}
+                              min={0.01}
+                              step={0.01}
+                              precision={2}
+                              size='default'
+                              onChange={(v) => {
+                                const next = [...groupEntries];
+                                next[idx] = { ...next[idx], ratio: v || 1 };
+                                setGroupEntries(next);
+                              }}
+                              style={{ width: 90 }}
+                            />
+                            <Select
+                              placeholder={t('渠道')}
+                              value={String(entry.channel_id || '')}
+                              optionList={channelOptions}
+                              filter
+                              showClear
+                              onChange={(v) => {
+                                const next = [...groupEntries];
+                                next[idx] = { ...next[idx], channel_id: v ? Number(v) : 0 };
+                                setGroupEntries(next);
+                              }}
+                              style={{ width: 180 }}
+                            />
+                            <Button
+                              size='small'
+                              type='danger'
+                              theme='borderless'
+                              onClick={() => {
+                                setGroupEntries(groupEntries.filter((_, i) => i !== idx));
+                              }}
+                            >
+                              {t('删除')}
+                            </Button>
+                          </div>
+                        ))}
+                        {groupEntries.length === 0 && (
+                          <Text type='tertiary'>{t('尚未配置分组，点击"添加分组"开始')}</Text>
+                        )}
                       </Col>
 
                       <Col span={10}>

@@ -20,13 +20,12 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { formatQuota, parseQuotaFromDollars } from '@/lib/format'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -63,7 +62,8 @@ import {
   sideDrawerFormClassName,
   sideDrawerHeaderClassName,
 } from '@/components/drawer-layout'
-import { createUser, updateUser, getUser, getGroups } from '../api'
+import { createUser, updateUser, getUser } from '../api'
+import { getChannels } from '@/features/channels/api'
 import { BINDING_FIELDS, ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants'
 import {
   userFormSchema,
@@ -92,15 +92,15 @@ export function UsersMutateDrawer({
   const { triggerRefresh } = useUsers()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [quotaDialogOpen, setQuotaDialogOpen] = useState(false)
+  const [groupEntries, setGroupEntries] = useState<Array<{group:string, ratio:number, channel_id:number}>>([])
 
-  // Fetch groups
-  const { data: groupsData } = useQuery({
-    queryKey: ['groups'],
-    queryFn: getGroups,
+  // Fetch channels for group binding dropdown
+  const { data: channelsData } = useQuery({
+    queryKey: ['channels', 'list'],
+    queryFn: () => getChannels({ p: 0, page_size: 200 }),
     staleTime: 5 * 60 * 1000,
   })
-
-  const groups = groupsData?.data || []
+  const channels = channelsData?.data?.items || []
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -114,6 +114,21 @@ export function UsersMutateDrawer({
       getUser(currentRow.id).then((result) => {
         if (result.success && result.data) {
           form.reset(transformUserToFormDefaults(result.data))
+          // Parse groups into entries
+          try {
+            if (result.data.groups) {
+              const parsed = JSON.parse(result.data.groups)
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                if (typeof parsed[0] === 'object') {
+                  setGroupEntries(parsed.map((g: any) => ({
+                    group: g.group || '', ratio: g.ratio || 1, channel_id: g.channel_id || 0,
+                  })))
+                } else {
+                  setGroupEntries(parsed.map((g: string) => ({ group: g, ratio: 1, channel_id: 0 })))
+                }
+              }
+            }
+          } catch {}
         }
       })
     } else if (open && !isUpdate) {
@@ -142,7 +157,17 @@ export function UsersMutateDrawer({
 
     setIsSubmitting(true)
     try {
-      const payload = transformFormDataToPayload(data, currentRow?.id)
+      // Inject group entries into the data
+      const enriched = { ...data }
+      if (isUpdate && groupEntries.length > 0) {
+        enriched.groups_input = JSON.stringify(groupEntries.map(g => ({
+          group: g.group,
+          ratio: Number(g.ratio) || 1,
+          channel_id: Number(g.channel_id) || 0,
+        })))
+        enriched.group = groupEntries[0].group || 'default'
+      }
+      const payload = transformFormDataToPayload(enriched, currentRow?.id)
       const result = isUpdate
         ? await updateUser(payload as typeof payload & { id: number })
         : await createUser(payload)
@@ -321,58 +346,77 @@ export function UsersMutateDrawer({
                 <SideDrawerSection>
                   <h3 className='text-sm font-medium'>{t('Group & Quota')}</h3>
 
-                  <FormField
-                    control={form.control}
-                    name='groups_input'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('Groups')}</FormLabel>
-                        <FormControl>
-                          <div className='rounded-lg border p-3 space-y-2 max-h-48 overflow-y-auto'>
-                            {groups.length === 0 && (
-                              <p className='text-sm text-muted-foreground'>{t('No groups available')}</p>
-                            )}
-                            {groups.map((group) => {
-                              const selected = field.value
-                                ? field.value.split(',').map((s: string) => s.trim()).filter(Boolean)
-                                : []
-                              const checked = selected.includes(group)
-                              return (
-                                <label
-                                  key={group}
-                                  className='flex items-center gap-2 cursor-pointer text-sm'
-                                >
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(c) => {
-                                      const current = field.value
-                                        ? field.value.split(',').map((s: string) => s.trim()).filter(Boolean)
-                                        : []
-                                      let next: string[]
-                                      if (c) {
-                                        next = current.includes(group) ? current : [...current, group]
-                                      } else {
-                                        next = current.filter((g: string) => g !== group)
-                                      }
-                                      const value = next.join(',')
-                                      field.onChange(value)
-                                      // Also update primary group to first selected
-                                      form.setValue('group', next[0] || 'default')
-                                    }}
-                                  />
-                                  <span>{group}</span>
-                                </label>
-                              )
-                            })}
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          {t('Select one or more groups. The first selected group is used as the primary group.')}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
+                  <div className='space-y-2'>
+                    <div className='flex items-center justify-between'>
+                      <p className='text-sm text-muted-foreground'>{t('Configure group name, ratio and bound channel')}</p>
+                      <Button type='button' size='sm' variant='outline'
+                        onClick={() => setGroupEntries([...groupEntries, { group: '', ratio: 1, channel_id: 0 }])}>
+                        + {t('Add')}
+                      </Button>
+                    </div>
+                    {groupEntries.map((entry, idx) => (
+                      <div key={idx} className='flex gap-2 items-center'>
+                        <Input
+                          className='w-28'
+                          placeholder={t('Group')}
+                          value={entry.group}
+                          onChange={(e) => {
+                            const next = [...groupEntries]
+                            next[idx] = { ...next[idx], group: e.target.value }
+                            setGroupEntries(next)
+                          }}
+                        />
+                        <Input
+                          className='w-20'
+                          type='number'
+                          placeholder={t('Ratio')}
+                          value={entry.ratio}
+                          step={0.01}
+                          min={0.01}
+                          onChange={(e) => {
+                            const next = [...groupEntries]
+                            next[idx] = { ...next[idx], ratio: Number(e.target.value) || 1 }
+                            setGroupEntries(next)
+                          }}
+                        />
+                        <Select
+                          items={[
+                            { value: 0, label: t('None') },
+                            ...channels.filter((ch: any) => 
+                              ch.id === entry.channel_id || !groupEntries.some((ge: any) => ge.channel_id === ch.id && ge.channel_id > 0)
+                            ).map((ch: any) => ({ value: ch.id, label: `${ch.name} (#${ch.id})` })),
+                          ]}
+                          onValueChange={(v) => {
+                            const next = [...groupEntries]
+                            next[idx] = { ...next[idx], channel_id: Number(v) || 0 }
+                            setGroupEntries(next)
+                          }}
+                          value={entry.channel_id}
+                        >
+                          <FormControl>
+                            <SelectTrigger className='w-44'>
+                              <SelectValue placeholder={t('Channel')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={0}>{t('None')}</SelectItem>
+                            {channels.filter((ch: any) =>
+                              ch.id === entry.channel_id || !groupEntries.some((ge: any) => ge.channel_id === ch.id && ge.channel_id > 0)
+                            ).map((ch: any) => (
+                              <SelectItem key={ch.id} value={ch.id}>{ch.name} (#{ch.id})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button type='button' size='sm' variant='ghost'
+                          onClick={() => setGroupEntries(groupEntries.filter((_, i) => i !== idx))}>
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      </div>
+                    ))}
+                    {groupEntries.length === 0 && (
+                      <p className='text-sm text-muted-foreground'>{t('No groups configured')}</p>
                     )}
-                  />
+                  </div>
 
                   <FormField
                     control={form.control}
