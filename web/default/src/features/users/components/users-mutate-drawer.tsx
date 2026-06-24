@@ -387,10 +387,10 @@ export function UsersMutateDrawer({
                               (entry.channel_ids || []).includes(ch.id) ||
                               !groupEntries.some((ge: any) => (ge.channel_ids || []).includes(ch.id))
                             )
-                            .map((ch: any) => ({ value: ch.id, label: `${ch.name} (#${ch.id})` }))
+                            .map((ch: any) => ({ value: String(ch.id), label: `${ch.name} (#${ch.id})` }))
                           }
-                          value={(entry.channel_ids || []).map(String)}
-                          onValueChange={(vals: string[]) => {
+                          selected={(entry.channel_ids || []).map(String)}
+                          onChange={(vals: string[]) => {
                             const next = [...groupEntries]
                             next[idx] = { ...next[idx], channel_ids: vals.map(Number) }
                             setGroupEntries(next)
