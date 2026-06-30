@@ -61,6 +61,15 @@ const Navigation = ({
         targetPath = '/login';
       }
 
+      // 文档页面由后端独立服务,使用 <a> 触发完整页面导航
+      if (link.itemKey === 'docs') {
+        return (
+          <a key={link.itemKey} href={targetPath} className={commonLinkClasses}>
+            {linkContent}
+          </a>
+        );
+      }
+
       return (
         <Link key={link.itemKey} to={targetPath} className={commonLinkClasses}>
           {linkContent}

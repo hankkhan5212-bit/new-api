@@ -1,0 +1,6 @@
+{
+  "name": "OpenRouter API Documentation Portal",
+  "description": "An interactive developer portal and API playground for OpenRouter and LLM integration, featuring code generators, model directory, and live request simulation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

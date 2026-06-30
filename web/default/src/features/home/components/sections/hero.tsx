@@ -47,7 +47,7 @@ export function Hero(props: HeroProps) {
   const { t } = useTranslation()
   const { status } = useStatus()
   const docsUrl =
-    (status?.docs_link as string | undefined) || 'https://docs.newapi.pro'
+    (status?.docs_link as string | undefined) || 'https://docs.tokenturbo.pro'
 
   const renderDocsButton = () => {
     const isExternal = docsUrl.startsWith('http')
@@ -69,7 +69,7 @@ export function Hero(props: HeroProps) {
       <Button
         variant='outline'
         className='group border-border/50 hover:border-border hover:bg-muted/50 inline-flex h-11 items-center gap-1.5 rounded-lg px-5 text-sm font-medium'
-        render={<Link to={docsUrl} />}
+        render={<a href={docsUrl} />}
       >
         <BookOpen className='text-muted-foreground/80 group-hover:text-foreground size-4 transition-colors duration-200' />
         <span>{t('Docs')}</span>
@@ -178,7 +178,7 @@ export function Hero(props: HeroProps) {
               </span>
               <p className='text-muted-foreground/60 text-xs leading-relaxed'>
                 {t(
-                  'Supports one-click configuration and perfectly adapts to NewAPI multi-protocol configuration.'
+                  'Supports one-click configuration and perfectly adapts to TokenTurbo multi-protocol configuration.'
                 )}
               </p>
             </div>

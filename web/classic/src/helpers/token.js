@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (C) 2025 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
@@ -95,7 +95,7 @@ export function getServerAddress() {
   return serverAddress;
 }
 
-export const CHANNEL_CONN_CLIPBOARD_TYPE = 'newapi_channel_conn';
+export const CHANNEL_CONN_CLIPBOARD_TYPE = 'TokenTurbo_channel_conn';
 
 /**
  * @param {string} key - 完整的 API key（含 sk- 前缀）

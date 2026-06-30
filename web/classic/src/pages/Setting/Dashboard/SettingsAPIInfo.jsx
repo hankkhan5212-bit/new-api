@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (C) 2025 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
@@ -166,11 +166,11 @@ const SettingsAPIInfo = ({ options, refresh }) => {
         );
       } else {
         const newId = Math.max(...apiInfoList.map((api) => api.id), 0) + 1;
-        const newApi = {
+        const TokenTurbo = {
           id: newId,
           ...apiForm,
         };
-        newList = [...apiInfoList, newApi];
+        newList = [...apiInfoList, TokenTurbo];
       }
 
       setApiInfoList(newList);

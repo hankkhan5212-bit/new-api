@@ -47,6 +47,9 @@ var classicBuildFS embed.FS
 //go:embed web/classic/dist/index.html
 var classicIndexPage []byte
 
+//go:embed web/api-documentation/dist
+var apiDocsBuildFS embed.FS
+
 func main() {
 	startTime := time.Now()
 
@@ -56,7 +59,7 @@ func main() {
 		return
 	}
 
-	common.SysLog("New API " + common.Version + " started")
+	common.SysLog("TokenTurbo" + common.Version + " started")
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -195,6 +198,7 @@ func main() {
 		DefaultIndexPage: indexPage,
 		ClassicBuildFS:   classicBuildFS,
 		ClassicIndexPage: classicIndexPage,
+		ApiDocsBuildFS:   apiDocsBuildFS,
 	})
 	var port = os.Getenv("PORT")
 	if port == "" {

@@ -30,7 +30,7 @@ type WaffoPancakeCreateSessionParams struct {
 
 // WaffoPancakeCheckoutSession is the response of CreateWaffoPancakeCheckoutSession.
 // CheckoutURL already carries the `#token=...` fragment; Token / TokenExpiresAt
-// are exposed separately for self-service flows driven from new-api's own UI.
+// are exposed separately for self-service flows driven from tokenturbo's own UI.
 type WaffoPancakeCheckoutSession struct {
 	SessionID      string
 	CheckoutURL    string
@@ -251,8 +251,8 @@ func ResolveWaffoPancakeSubscriptionTradeNo(event *WaffoPancakeWebhookEvent) (st
 // Deterministic default names for "+ Create": stable bodies mean stable
 // X-Idempotency-Key, which lets Pancake dedupe retries server-side.
 const (
-	defaultWaffoPancakeStoreName   = "new-api-store"
-	defaultWaffoPancakeProductName = "new-api-charge-product"
+	defaultWaffoPancakeStoreName   = "tokenturbo-store"
+	defaultWaffoPancakeProductName = "tokenturbo-charge-product"
 )
 
 // CreateWaffoPancakePrimaryStore creates a Pancake Store using in-flight
@@ -275,8 +275,8 @@ func CreateWaffoPancakePrimaryStore(ctx context.Context, merchantID, privateKey 
 // OnetimeProduct priced at `amount` USD, used as a subscription plan's
 // SubscriptionPlan.WaffoPancakeProductId.
 //
-// OnetimeProduct (not SubscriptionProduct) because new-api has no renewal-
-// event handling; Pancake auto-renewing without new-api extending user
+// OnetimeProduct (not SubscriptionProduct) because tokenturbo has no renewal-
+// event handling; Pancake auto-renewing without tokenturbo extending user
 // access would be a UX divergence. Revisit if renewal handling is added.
 func CreateWaffoPancakeProductForPlan(ctx context.Context, merchantID, privateKey, storeID, name, amount, returnURL string) (string, error) {
 	storeID = strings.TrimSpace(storeID)

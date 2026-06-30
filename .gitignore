@@ -11,6 +11,10 @@ logs
 web/default/dist
 web/classic/dist
 web/node_modules
+web/default/node_modules
+web/classic/node_modules
+web/api-documentation/dist
+web/api-documentation/node_modules
 web/dist
 .env
 one-api
@@ -36,3 +40,4 @@ data/
 token_estimator_test.go
 skills-lock.json
 .playwright-mcp
+

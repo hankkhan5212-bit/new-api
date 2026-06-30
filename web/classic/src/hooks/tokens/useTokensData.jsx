@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (C) 2025 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
@@ -233,7 +233,7 @@ export const useTokensData = (openFluentNotification, openCCSwitchModal) => {
     }
     if (url.includes('{cherryConfig}') === true) {
       let cherryConfig = {
-        id: 'new-api',
+        id: 'tokenturbo',
         baseUrl: serverAddress,
         apiKey: `sk-${fullKey}`,
       };
@@ -243,7 +243,7 @@ export const useTokensData = (openFluentNotification, openCCSwitchModal) => {
       url = url.replaceAll('{cherryConfig}', encodedConfig);
     } else if (url.includes('{aionuiConfig}') === true) {
       let aionuiConfig = {
-        platform: 'new-api',
+        platform: 'tokenturbo',
         baseUrl: serverAddress,
         apiKey: `sk-${fullKey}`,
       };
@@ -253,7 +253,7 @@ export const useTokensData = (openFluentNotification, openCCSwitchModal) => {
       url = url.replaceAll('{aionuiConfig}', encodedConfig);
     } else if (url.includes('{deepchatConfig}') === true) {
       let deepchatConfig = {
-        id: 'new-api',
+        id: 'tokenturbo',
         baseUrl: serverAddress,
         apiKey: `sk-${fullKey}`,
       };

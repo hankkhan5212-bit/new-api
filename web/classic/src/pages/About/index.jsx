@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (C) 2025 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
@@ -64,21 +64,21 @@ const About = () => {
       <p>{t('可在设置页面设置关于内容，支持 HTML & Markdown')}</p>
       {t('New API项目仓库地址：')}
       <a
-        href='https://github.com/QuantumNous/new-api'
+        href='https://github.com/QuantumNous/tokenturbo'
         target='_blank'
         rel='noopener noreferrer'
         className='!text-semi-color-primary'
       >
-        https://github.com/QuantumNous/new-api
+        https://github.com/QuantumNous/tokenturbo
       </a>
       <p>
         <a
-          href='https://github.com/QuantumNous/new-api'
+          href='https://github.com/QuantumNous/tokenturbo'
           target='_blank'
           rel='noopener noreferrer'
           className='!text-semi-color-primary'
         >
-          NewAPI
+          TokenTurbo
         </a>{' '}
         {t('© {{currentYear}}', { currentYear })}{' '}
         <a

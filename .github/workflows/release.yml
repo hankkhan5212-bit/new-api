@@ -47,6 +47,13 @@ jobs:
           cd classic
           VITE_REACT_APP_VERSION=$VERSION bun run build
           cd ../..
+      - name: Build API Documentation
+        run: |
+          cd web/api-documentation
+          bun install --frozen-lockfile
+          bun run generate-api
+          VITE_BASE=/docs/ bun run vite build
+          cd ../..
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -107,6 +114,13 @@ jobs:
           cd classic
           VITE_REACT_APP_VERSION=$VERSION bun run build
           cd ../..
+      - name: Build API Documentation
+        run: |
+          cd web/api-documentation
+          bun install --frozen-lockfile
+          bun run generate-api
+          VITE_BASE=/docs/ bun run vite build
+          cd ../..
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -163,6 +177,13 @@ jobs:
           bun install --frozen-lockfile
           cd classic
           VITE_REACT_APP_VERSION=$VERSION bun run build
+          cd ../..
+      - name: Build API Documentation
+        run: |
+          cd web/api-documentation
+          bun install --frozen-lockfile
+          bun run generate-api
+          VITE_BASE=/docs/ bun run vite build
           cd ../..
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5

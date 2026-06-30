@@ -38,7 +38,7 @@ import {
   IconFile,
   IconCopy,
 } from '@douyinfe/semi-icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import NoticeModal from '../../components/layout/NoticeModal';
 import {
   Moonshot,
@@ -67,6 +67,7 @@ const { Text } = Typography;
 
 const Home = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [statusState] = useContext(StatusContext);
   const actualTheme = useActualTheme();
   const [homePageContentLoaded, setHomePageContentLoaded] = useState(false);
@@ -231,7 +232,7 @@ const Home = () => {
                       icon={<IconGithubLogo />}
                       onClick={() =>
                         window.open(
-                          'https://github.com/QuantumNous/new-api',
+                          'https://github.com/QuantumNous/tokenturbo',
                           '_blank',
                         )
                       }
@@ -244,7 +245,13 @@ const Home = () => {
                         size={isMobile ? 'default' : 'large'}
                         className='flex items-center !rounded-3xl px-6 py-2'
                         icon={<IconFile />}
-                        onClick={() => window.open(docsLink, '_blank')}
+                        onClick={() => {
+                          if (/^https?:\/\//.test(docsLink)) {
+                            window.open(docsLink, '_blank')
+                          } else {
+                            window.location.href = docsLink
+                          }
+                        }}
                       >
                         {t('文档')}
                       </Button>

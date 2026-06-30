@@ -22,12 +22,7 @@ import path from 'node:path'
 // This script is executed from the web/ package root (see package.json script).
 const LOCALES_DIR = path.resolve('src/i18n/locales')
 const FALLBACK_COMPARE_LOCALE = 'en' // used for "still English" detection only
-const OBFUSCATED_KEYS = [
-  {
-    runtime: ['footer', 'new' + 'api', 'projectAttributionSuffix'].join('.'),
-    serialized: 'footer.new\\u0061pi.projectAttributionSuffix',
-  },
-]
+const OBFUSCATED_KEYS = []
 
 const BRAND_AND_LITERAL_KEYS = new Set([
   'AI Proxy',
@@ -64,9 +59,8 @@ const BRAND_AND_LITERAL_KEYS = new Set([
   'Mistral',
   'MokaAI',
   'Moonshot',
-  'New API',
-  'New API &lt;noreply@example.com&gt;',
-  'NewAPI',
+  'TokenTurbo',
+  'TokenTurbo &lt;noreply@example.com&gt;',
   'OAuth Client Secret',
   'OhMyGPT',
   'Ollama',
@@ -107,9 +101,9 @@ const BRAND_AND_LITERAL_KEYS = new Set([
   '"default": "us-central1", "claude-3-5-sonnet-20240620": "europe-west1"',
   'edit_this',
   'footer.columns.related.links.midjourney',
-  'footer.columns.related.links.newApiKeyTool',
+  'footer.columns.related.links.tokenturboKeyTool',
   'my-status',
-  'new-api-key-tool',
+  'tokenturbo-key-tool',
   'price_xxx',
   'whsec_xxx',
 ])

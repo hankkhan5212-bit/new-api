@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (C) 2025 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
@@ -257,7 +257,7 @@ export default function GeneralSettings(props) {
                   field={'general_setting.docs_link'}
                   label={t('文档地址')}
                   initValue={''}
-                  placeholder={t('例如 https://docs.newapi.pro')}
+                  placeholder={t('例如 https://docs.TokenTurbo.pro')}
                   onChange={handleFieldChange('general_setting.docs_link')}
                   showClear
                 />
